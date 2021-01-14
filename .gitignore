@@ -1,0 +1,11 @@
+.ipynb_checkpoints
+.config
+/.vscode
+/dist
+/build
+__pycache__
+.DS_Store
+*.log
+
+# Sphinx documentation
+docs/_build/

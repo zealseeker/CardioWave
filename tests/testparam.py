@@ -1,0 +1,33 @@
+import unittest
+import numpy as np
+import pandas as pd
+from cdwave import param
+
+parameters = ['up_length', 'down_length',
+              'full_down', 'rd_ratio', 'freq', 'maximum']
+
+
+def generate_random_params():
+    df = pd.DataFrame({
+        'plate': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
+        'compound': ['PosCtrl', 'PosCtrl', 'A', 'A', 'PosCtrl', 'PosCtrl', 'A', 'A'],
+        'well': ['A1', 'A1', 'A2', 'A2', 'B1', 'B1', 'B2', 'B2'],
+        'state': ['prior', 'treat', 'prior', 'treat', 'prior', ' treat', 'prior', 'treat'],
+        'concentration': [0, 0, 10, 5, 0, 0, 10, 5],
+        'index': [1, 2, 3, 4, 5, 6, 7, 8],
+        'vendor': ['AstraZeneca'] * 8
+    })
+    for p in parameters:
+        df[p] = np.random.random(8)
+    return df
+
+
+class TestParam(unittest.TestCase):
+    _data = generate_random_params()
+
+    def test_normalise_baseline(self):
+        sub_params = ['rd_ratio']
+        div_params = ['up_length', 'down_length',
+                      'full_down', 'freq', 'maximum']
+        df = param.normalise_by_baseline(self._data, sub_params, div_params)
+        self.assertTrue(df[parameters].notna().all().all())
