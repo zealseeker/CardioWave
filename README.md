@@ -4,7 +4,7 @@ CardioWave: A tool for waveform analysis
 ## Parameters we can calculate
 
 Common waveform parameters include peak count, average peak amplitude, etc. For more details please check
-[Support Parameters](docs/index.rst)
+[Support Parameters](docs/support_parameters.rst)
 
 ## Usage
 
@@ -62,7 +62,7 @@ numpy>=1.16
 scipy>=1.2
 tqdm>=4.32
 pandas>=0.24
-statsmodels==0.10.0
+statsmodels>=0.10.2
 ```
 For GUI support and parameter analysis
 ```
