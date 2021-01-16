@@ -13,10 +13,9 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/zealseeker/cardiowave",
     packages=setuptools.find_packages(),
-    entry_points={'console_scripts': ['cardiowave=cdwave.viewer.gui:main']},
     include_package_data=True,
     package_data = {
-        'cdwave': ['viewer/*', 'param_annot.json']
+        'cdwave': ['param_annot.json']
     },
     classifiers=[
         "Programming Language :: Python :: 3",

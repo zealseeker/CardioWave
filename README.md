@@ -4,7 +4,7 @@ CardioWave: A tool for waveform analysis
 ## Parameters we can calculate
 
 Common waveform parameters include peak count, average peak amplitude, etc. For more details please check
-[Support Parameters](docs/support_parameters.rst)
+[Supporting Parameters](docs/support_parameters.rst)
 
 ## Usage
 
@@ -42,12 +42,13 @@ df = dataset.get_parameter_df()
 df.to_csv(os.path.join(data_path, 'parameters.csv'))
 ```
 
-To use GUI, just use
+Considering license issue, GUI has been moved to [CarioWaveGUI](https://github.com/zealseeker/CardioWaveGUI)
+
 ```sh
 # Run by python package
-python -m cdwave.viewer
+python -m CardioWaveGUI
 # Or run by command
-cardiowave
+python CardioWaveGUI/gui.py
 ```
 
 ![](docs/pic/gui.png)
