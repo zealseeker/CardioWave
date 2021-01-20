@@ -10,7 +10,7 @@ Common waveform parameters include peak count, average peak amplitude, etc. For 
 
 Prepare a CSV table like this format:
 
-name|concentration|well|plate|..others..|time|signal
+compound|concentration|well|plate|..others..|time|signal
 ----|----|----|-----|----|----|----
 CP1|0.1|A1|P1|...|0|1000
 CP1|0.1|A1|P1|...|0.33|1001

@@ -6,7 +6,7 @@ class Dataset:
     _data = None
 
     def __init__(self):
-        if Dataset._data == None:
+        if Dataset._data is None:
             Dataset._data = self.load_data()
         self.data = Dataset._data
 

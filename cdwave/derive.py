@@ -38,10 +38,10 @@ def default_process_fnc(status=-1, total=0):
 
 
 def calc_parameters_for_waveforms(dataset: Dataset,
-                                 process_fnc: Callable = None,
-                                 batch: int = 200,
-                                 processes: int = None,
-                                 custom_calculator: Callable = None):
+                                  process_fnc: Callable = None,
+                                  batch: int = 200,
+                                  processes: int = None,
+                                  custom_calculator: Callable = None):
     """Calculate parameter for waveforms
 
     Args:

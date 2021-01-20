@@ -2,6 +2,7 @@ import os
 import pickle
 import gzip
 import logging
+import warnings
 from itertools import product
 import pandas as pd
 from cdwave import fnc
@@ -30,7 +31,7 @@ class WaveformFull:
     Args:
         item (dict): A dictionary contains all the information of the waveform
             required keys: signals, plate, well, concentration. item['singal']
-            is a dictionary with times (x) and signals (y) 
+            is a dictionary with times (x) and signals (y)
             `{'x': [0.1, 0.2], 'y':[100, 101]}`
 
     Example:
@@ -95,6 +96,10 @@ class WaveformFull:
     @staticmethod
     def standardise_signal(signal: dict):
         signals = signal['y']
+        if len(signals) < 5:
+            warnings.warn(
+                "Number of signal is less than 5 and cannot be smoothed")
+            return signals
         signals = fnc.signal_filter(signals)
         minimum = signals.min()
         signal['y'] = signals - minimum
@@ -212,7 +217,7 @@ class Dataset:
     def filter_by_filters(self, filters, replace=True):
         """
         Args:
-            filters: a dictionary of {column: value} 
+            filters: a dictionary of {column: value}
         return:
             filtered dataframe
         """
@@ -229,7 +234,7 @@ class Dataset:
 
 class DataLoader:
 
-    def __init__(self, filepath: str = None, log=print):
+    def __init__(self, filepath: str = None, log=None):
         self.filepath = filepath
         self.dataframe = pd.DataFrame()
         self.signals = []
@@ -238,7 +243,10 @@ class DataLoader:
         if filepath and not os.path.exists(filepath):
             raise Exception(
                 "Cannot open the file {}, doesn't exist!".format(filepath))
-        self.log = log
+        if log is None:
+            self.log = logger.debug
+        else:
+            self.log = log
 
     def transfer(self) -> Dataset:
         """Parse the waveform from tables and generate a dataset
@@ -261,14 +269,17 @@ class DataLoader:
 class StandardCSVLoader(DataLoader):
     """A loader parsing "standard csv file". The format of the table file is like
     ```
-    name,concentration,well,plate,time,signal
+    compound,concentration,well,plate,time,signal
     CP1,0.1,A1,P1,0,1000
     CP1,0.1,A1,P1,0.33,1001
     CP2,0.1,A2,P1,0,1000
     ```
     """
 
-    def __init__(self, filepath: str = None, data: pd.DataFrame = None, log=print):
+    def __init__(self, filepath: str = None, data: pd.DataFrame = None, log=None):
+        if isinstance(filepath, pd.DataFrame):
+            data = filepath
+            filepath = None
         super().__init__(filepath=filepath, log=log)
         if filepath is None:
             if data is None:
@@ -287,7 +298,8 @@ class StandardCSVLoader(DataLoader):
         miss_column = set(required_columns) - set(df.columns)
         if miss_column:
             raise KeyError('Column {} is missing'.format(miss_column))
-
+        if df.duplicated(['plate', 'well', 'time']).any():
+            raise ValueError('Find duplicacy in set')
         for _, gdf in df.groupby(['plate', 'well']):
             item = gdf.iloc[0]
             input_item = {x: item[x] for x in attribute_columns if x in item}

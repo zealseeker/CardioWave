@@ -1,9 +1,8 @@
 import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
-from matplotlib import pyplot as plt
 
-def fit_parameter(df: pd.DataFrame, parameter, ax=None):
+def fit_parameter(df: pd.DataFrame, parameter):
     """Fit the S curve of concentration-response
     
     Args:
@@ -21,11 +20,9 @@ def fit_parameter(df: pd.DataFrame, parameter, ax=None):
     freqs = df[parameter]
     concentrations = df.concentration
     hillcurve = HillCurve(concentrations, freqs)
-    if ax:
-        hillcurve.plot(ax, ylabel=parameter)
     popt = hillcurve.popt
     perr = hillcurve.calc_perr()
-    return popt, perr
+    return popt, perr, hillcurve
 
 def fsigmoid(x, a, x0, k, b):
     return k / (1.0 + np.exp(-a*(x-x0))) + b
@@ -72,19 +69,6 @@ class HillCurve:
     def hill(self):
         return self.popt[0] * np.sign(self.popt[3])
 
-    def plot(self, ax=None, density=0.1, ylabel=None):
-        if ax == None:
-            ax = plt.subplots()
-        cc = np.arange(self.c_min, self.c_max, density)
-        vsigmoid = np.vectorize(lambda x: fsigmoid(
-            x, *self.popt) * self.p_diff + self.p_min)
-        ax.plot(cc, vsigmoid(cc))
-        ax.plot(self.concentrations, self.responses, 'o', label="normal")
-        ax.text(0.7, 0.2, 'EC50: {:.2f}'.format(self.EC50), transform=ax.transAxes)
-        if ylabel:
-            ax.set_ylabel(ylabel)
-        return ax
-        
     def calc_perr(self):
         perr = np.sqrt(np.diag(self.pcov))
         return perr

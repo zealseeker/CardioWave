@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 class Waveform:
     """Class for waveform analysis
 
-    Args:  
+    Args:
         series: A series of which the name is the well name, values are amplitudes
 
     Attributes:
@@ -27,7 +27,7 @@ class Waveform:
         num_peak (int): Number of peaks
         n (int): Number of points
         maximum (int): Maximum of amplitudes
-        minimum (int): Minimum of amplitudes 
+        minimum (int): Minimum of amplitudes
     """
     max_shoulder_tail_ratio = 2.5
 
@@ -76,9 +76,9 @@ class Waveform:
         self._group = group
         for i, gdf in group:
             cond = gdf['peak'].notna() & (gdf['peak'] > 1)
-            l = cond.sum()
+            n_subpeak = cond.sum()
             index = gdf.loc[cond].index
-            self.df.loc[index, 'peak'] = list(range(2, l+2))
+            self.df.loc[index, 'peak'] = list(range(2, n_subpeak+2))
 
     def analyse_normal_waves(self, diff_n=1, l=3):
         """Get status of points for a normal wave
@@ -177,7 +177,7 @@ class Waveform:
 
     def get_peaks(self, height=None, prominence=None):
         """Identify the peaks and group of the whole waveform
-        
+
         Args:
             height: number or ndarray or sequence, optional Required height of peaks.
                 Either a number, None, an array matching x or a 2-element sequence of the former.
@@ -185,9 +185,9 @@ class Waveform:
                 if supplied, as the maximal required height.
             prominence: number or ndarray or sequence, optional Required prominence of peaks.
                 Either a number, None, an array matching x or a 2-element sequence of the former.
-                The first element is always interpreted as the minimal and the second, if supplied, 
+                The first element is always interpreted as the minimal and the second, if supplied,
                 as the maximal required prominence. The default value is the maximum of 20 and 10%
-                of maximum amplitude
+                of maximum amplitude.
         """
         series = self.df[self.name]
         self.df['category'] = (series - self.minimum) // self.variance
@@ -195,7 +195,8 @@ class Waveform:
         opt_series = series - series.index * 0.0001
         if prominence is None:
             prominence = max(20, 0.1*self.maximum)
-        peaks, properties = find_peaks(opt_series, height=height, prominence=prominence)
+        peaks, properties = find_peaks(
+            opt_series, height=height, prominence=prominence)
         prominences = properties['prominences']
         self.df['peak'] = 0
         self.df['prominence'] = 0
@@ -423,7 +424,7 @@ class Waveform:
 
     def calc_fft_freq_ratio(self):
         r"""Calculate the energy ratio between double frequency (minor) and major
-        
+
         .. math::
 
             FFT Ratio = \frac{\sum_{x=f_{mi}-0.05}^{f_{mi}+0.05}p(x)}
@@ -722,6 +723,8 @@ def wave_transform(signals: np.ndarray, sample_rate=100, method='fft'):
         psd = instantaneous_frequency
     elif method == 'welch':
         frq, psd = welch(signals, fs=100, nperseg=len(signals)-1)
+    else:
+        raise ValueError('The method is not Support')
     return frq, psd
 
 

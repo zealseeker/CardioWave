@@ -160,6 +160,7 @@ def normalise_by_negctrl(df: pd.DataFrame, subtract_params: list, divide_params:
     parameters = subtract_params + divide_params
     # TODO remove specific names such as DMSO, NegCtrl
     control_dict = {'GSK': 'DMSO', 'AstraZeneca': 'NegCtrl'}
+
     def aggregate_negative_control(pdf, name):
         samples = pdf[pdf['compound'] == name]
         return samples[parameters].agg('median')
@@ -266,7 +267,7 @@ def calc_inflection(df: pd.DataFrame, parameters=None, min_n=4):
             fs = cdf[parameter]
             try:
                 curve = hillcurve.HillCurve(cs, fs)
-            except:
+            except ValueError:
                 print(plate, cmp)
                 continue
             perr = curve.calc_perr()
@@ -328,13 +329,14 @@ def linear_regression_with_logc(df: pd.DataFrame,
         raise KeyError("Do not have beat_stop column")
     if remove_beatstop:
         df = df[~df['beat_stop']]
-    if error!='raise' and len(df) == 0:
+    if error != 'raise' and len(df) == 0:
         return error, error
     reg = LinearRegression().fit(
         df['logc'].values.reshape(-1, 1), df[parameter])
     k = reg.coef_[0]
     b = reg.intercept_
     return k, b
+
 
 def npoint_descriptor(df: pd.DataFrame, parameter: str, n: int):
     "This function only works for 8 concentrations"
@@ -348,7 +350,8 @@ def npoint_descriptor(df: pd.DataFrame, parameter: str, n: int):
     elif n == 8:
         res = df[parameter].values
         if len(res) != 8:
-            logger.warning('This compound does not have 8 points - %d', len(res))
+            logger.warning(
+                'This compound does not have 8 points - %d', len(res))
     else:
         raise ValueError("Only 3 or 8 points are supported.")
     return res

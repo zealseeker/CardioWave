@@ -1,4 +1,6 @@
 import unittest
+from io import StringIO
+import pandas as pd
 from cdwave import data, fnc
 from tests import Dataset
 
@@ -39,10 +41,16 @@ class TestData(unittest.TestCase):
             set(parameters.keys())
         self.assertFalse(default_more, "These parameters are not calculated}")
 
-def main():
-    dataset = data.Dataset.loaddata(r'C:\Users\hy929891\OneDrive - University of Cambridge\Projects\Cardiotox\WaveformData\alldata.pickle.gz')
-    wave = dataset.waveforms[1622]
-    waveform = fnc.Waveform(wave.get_signal_series())
-    waveform.get_peaks()
-    waveform.analyse()
-    waveform.get_parameters()
+    def test_csvloader(self):
+        csv_string = """compound,concentration,well,plate,time,signal
+        CP1,0.1,A1,P1,0,1000
+        CP1,0.1,A1,P1,0.33,1001
+        CP2,0.1,A2,P1,0,1000""".replace(' ', '')
+        obj = StringIO(csv_string)
+        df = pd.read_csv(obj)
+        dataset = data.StandardCSVLoader(df).transfer()
+        self.assertEqual(len(dataset), 2)
+        obj = StringIO(csv_string+'\nCP1,0.1,A1,P1,0,100')
+        df = pd.read_csv(obj)
+        with self.assertRaises(ValueError):
+            dataset = data.StandardCSVLoader(df).transfer()

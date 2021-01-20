@@ -14,7 +14,7 @@ setuptools.setup(
     url="https://github.com/zealseeker/cardiowave",
     packages=setuptools.find_packages(),
     include_package_data=True,
-    package_data = {
+    package_data={
         'cdwave': ['param_annot.json']
     },
     classifiers=[

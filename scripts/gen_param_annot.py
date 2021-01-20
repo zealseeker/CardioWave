@@ -1,7 +1,8 @@
 import json
 import sys
-sys.path.append('.')
 from cdwave import data
+sys.path.append('.')
+
 
 with open('cdwave/param_annot.json') as fp:
     anno_dict = json.load(fp)
