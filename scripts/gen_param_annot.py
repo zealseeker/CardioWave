@@ -1,13 +1,13 @@
-import json
 import sys
+import pandas as pd
 from cdwave import data
 sys.path.append('.')
 
-
-with open('cdwave/param_annot.json') as fp:
-    anno_dict = json.load(fp)
-name_dict = data.WaveformFull.parameter_annotations
-
+print('Reading parameter file ...')
+parameter_df = pd.read_csv('cdwave/parameters.csv', index_col=0)
+name_dict = parameter_df['Name'].to_dict()
+anno_dict = parameter_df['Annotation'].to_dict()
+print('There are {} parameters putting to docs/support_parameters.rst'.format(len(parameter_df)))
 strings = ""
 for var in anno_dict:
     name = name_dict[var]

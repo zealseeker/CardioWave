@@ -1,36 +1,42 @@
-*	Rise Time (`up_length`): Average rise time
-*	Peak to End (`down_length`): Average duration from peak point to the tail, the first point lower than valley value plus variance (10% of max)
-*	Decay Time (`full_down`): Average of duration between peak and next starting point
+*	Uniformity (`uniform`): Peak uniformity (p > 0.99 in KS test)
+*	Noisy Waveform (`noise`): If the waveform is noise, which means it is probabily a bad waveform
+*	Double Peak (`double_peak`): If there is double peak (max_combo_peaks > 1)
+*	Fail (`fail_analysis`): If there is a missing key point (starting point, down point etc.)
+*	σ(Amplitude) (`std_amplitude`): The standard deviation of amplitudes
+*	σ(Intensity) (`std_intensity`): The standard deviation of intensity
+*	σ(Peak Space) (`std_lambda`): The standard deviation of period
+*	σ(Inner Peak Space) (`std_inner_lambda`): The standard deviation of period removing outliers
+*	σ(Shoulder Position) (`std_shoulder`): The standard deviation of shoulder position
+*	σ(Shoulder/Tail) (`std_shoulder_tail`): The standard deviation of shoulder tail ratio
+*	σ(PW10) (`PW10_std`): Standard deviation of the peak widths at 10% of prominence
+*	σ(PW25) (`PW25_std`): Standard deviation of the peak widths at 25% of prominence
+*	σ(PW50) (`PW50_std`): Standard deviation of the peak widths at 50% of prominence
+*	σ(PW80) (`PW80_std`): Standard deviation of the peak widths at 80% of prominence
+*	σ(PW90) (`PW90_std`): Standard deviation of the peak widths at 90% of prominence
+*	σ(Tail Duration) (`std_tail`): Standard deviation of Tail Duration
+*	σ(Shoulder Amplitude) (`std_shoulder_amp`): The standard deviation of amplitude of shoulder
 *	Rise/Decay (`rd_ratio`): Average rise time/decay time ratio
-*	Peak Frequency (`freq`): Average number of peaks for the 100 seconds, 100/Peak Space
+*	Tail Proportion (`tail_proportion`): The average proportion of tail in one period
+*	Shoulder/Tail (`avg_shoulder_tail`): The average ratio between prominence of shoulder and tail in a kernel density distribution
+*	FFT Ratio (`fft_ratio`): Ratio between second and first peak position in Fast Fourier Transformation
+*	Rise Time (`up_length`): Average rise time
+*	Decay Time (`down_length`): Average duration of decreasing waveform, from peak point to the first point lower than valley value plus variance (10% of max)
+*	Peak To End (`full_down`): Average of duration between peak and next starting point
+*	Number of Peaks (`n_peak`): Number of peaks
+*	Peak Frequency (`freq`): Number of period for the 100 seconds, 100/Peak Space
 *	Maximum Amplitude (`maximum`): The highest amplitude
 *	Average Peak Amplitude (`avg_amplitude`): Average peak amplitude
-*	σ(Amplitude) (`std_amplitude`): Standard deviation of peak amplitude
-*	Average Inner Peak Space (`avg_inner_lambda`): Average inner peak space, where inner means excluding cycles where the peak space is an outlier
-*	Multi-Peak (`max_combo_peaks`): Maximum of multi-Peak, which is the number of peaks in each cycle
-*	Average Peak Space (`avg_lambda`): Average peak space, the duration between two peaks
-*	σ(Peak Space) (`std_lambda`): Standard deviation of peak space
-*	σ(Inner Peak Space) (`std_inner_lambda`): Standard deviation of inner peak space
-*	Average Tail Duration (`avg_tail`): Average tail duration, from the first point lower than valley value plus variance (10% of max) to the next starting point
-*	σ(Tail Duration) (`std_tail`): Standard deviation of Tail Duration
-*	Average Tail Proportion (`tail_proportion`): Average tail proportion, the ratio between tail druation and the peak space
-*	Average Shoulder Position (`avg_shoulder`): Average shoulder position, a normalised (0-1) float indicating the position of shoulder from peak to valley
-*	Average Shoulder/Tail (`avg_shoulder_tail`): Average shoulder tail ratio, which is based on kernel density estimation
-*	σ(Shoulder Position) (`std_shoulder`): Standard deviation of shoulder position
-*	FFT Ratio (`fft_ratio`): Fast Fourier transformation Ratio
-*	σ(Shoulder/Tail) (`std_shoulder_tail`): Standard deviation of shoulder tail ratio
-*	Average Intensity (`avg_intensity`): Average difference between the peak amplitude and valley amplitude in each cycle
-*	σ(Average Intensity) (`std_intensity`): Standard deviation of average intensity
-*	Valley (`avg_valley`): Average valley amplitude
-*	Peak Count (`n_peak`): Number of peaks in the waveform
-*	RMS (`rms`): Root mean square of the calcium transients
-*	PW10 (`PW10_mean`): Average Peak width at 10% of prominence
-*	σ(PW10) (`PW10_std`): Standard deviation of peak width at 10% of prominence
-*	PW25 (`PW25_mean`): Average Peak width at 25% of prominence
-*	σ(PW25) (`PW25_std`): Standard deviation of peak width at 25% of prominence
-*	PW50 (`PW50_mean`): Average Peak width at 50% of prominence
-*	σ(PW50) (`PW50_std`): Standard deviation of peak width at 50% of prominence
-*	PW80 (`PW80_mean`): Average Peak width at 80% of prominence
-*	σ(PW80) (`PW80_std`): Standard deviation of peak width at 80% of prominence
-*	PW90 (`PW90_mean`): Average Peak width at 90% of prominence
-*	σ(PW90) (`PW90_std`): Standard deviation of peak width at 90% of prominence
+*	Average Intensity (`avg_intensity`): The average intensity (highest signal in a period)
+*	RMS (`rms`): RMS Peak amplitude
+*	Peak Space (`avg_lambda`): The average duration of period
+*	Average Inner Peak Space (`avg_inner_lambda`): The average duration of periods removing outliers
+*	Average Tail Duration (`avg_tail`): The average duration of tail
+*	Average Valley (`avg_valley`): The average intensity of valley points
+*	Average Shoulder Position (`avg_shoulder`): The average relative position of shoulder in a period (0-1)
+*	Multi-Peaks (`max_combo_peaks`): Maximum of the number of peaks in one period
+*	PW10 (`PW10_mean`): The average of peak width at 10% from peak to bottom.
+*	PW25 (`PW25_mean`): The average of peak width at 25% from peak to bottom
+*	PW50 (`PW50_mean`): The average of peak width at 50% from peak to bottom
+*	PW80 (`PW80_mean`): The average of peak width at 80% from peak to bottom
+*	PW90 (`PW90_mean`): The average of peak width at 90% from peak to bottom
+*	Average Shoulder Amplitude (`avg_shoulder_amp`): The average of amplitude of shoulder

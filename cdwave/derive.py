@@ -1,8 +1,9 @@
 import logging
 import os
 from multiprocessing import Pool
-from tqdm import tqdm
 from collections.abc import Callable
+from tqdm import tqdm
+from joblib import Parallel, delayed
 from cdwave.data import WaveformFull, Dataset
 from cdwave.fnc import Waveform
 
@@ -84,3 +85,48 @@ def calc_parameters_for_waveforms(dataset: Dataset,
             process_fnc(status=1)
     if process_fnc:
         process_fnc(status=2)
+
+
+def calc_parameters_with_threshold(dataset: Dataset,
+                                   threshold: int = 100,
+                                   processes: int = None,
+                                   custom_calculator: Callable = None):
+    """Calculate parameter for waveforms
+
+    Args:
+        dataset: The waveform dataset
+        process_fnc: A processing function used to send out the progress,
+            see `default_process_fnc`, which uses tqdm
+        batch: Batch size for multi-processing
+        processes: Number of processors
+        custom_calculator: A custom calculator which can setup the custom thresholds.
+            If `None`, `calc_parameter` will be used by default.
+    """
+    if processes is None:
+        try:
+            processes = int(os.environ['NUMEXPR_MAX_THREADS'])
+        except (KeyError, ValueError):
+            processes = 4
+    if custom_calculator is None:
+        custom_calculator = calc_parameter_with_threshold
+    logger.debug('Calculating parameters for %d waveforms with %d preceossors', len(dataset), processes)
+    parameters = Parallel(processes)(
+        delayed(custom_calculator)(_waveform, threshold) for _waveform in tqdm(dataset.waveforms))
+    for waveform, p in zip(dataset.waveforms, parameters):
+        if p is not None:
+            waveform.parameters = p
+
+
+def calc_parameter_with_threshold(waveform: WaveformFull, threshold) -> dict:
+    """Calculate parameters of a waveform"""
+    series = waveform.get_signal_series()
+    wave = Waveform(series)
+    if not wave.get_peaks(height=threshold):
+        return None
+    wave.analyse()
+    try:
+        r = wave.get_parameters()
+    except Exception as e:
+        logging.error('Cannot get parameters of %s', waveform)
+        raise e
+    return r

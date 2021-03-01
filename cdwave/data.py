@@ -3,12 +3,11 @@ import pickle
 import gzip
 import logging
 import warnings
-from itertools import product
 import pandas as pd
 from cdwave import fnc
 
 logger = logging.getLogger(__name__)
-
+crt_path = os.path.abspath(os.path.dirname(__file__))
 
 class WaveformFull:
     """WaveformFull contains all the information such as compound name,
@@ -42,31 +41,9 @@ class WaveformFull:
         ...         'well': 'A1'}
         >>> wave = WaveformFull(item)
     """
-    parameter_names = ['up_length', 'down_length', 'full_down', 'rd_ratio', 'double_peak',
-                       'freq', 'maximum', 'uniform', 'noise', 'avg_amplitude', 'avg_inner_lambda',
-                       'max_combo_peaks', 'avg_lambda', 'tail_proportion', 'std_inner_lambda',
-                       'avg_tail', 'std_tail', 'avg_shoulder', 'avg_shoulder_tail',
-                       'std_shoulder', 'std_shoulder_tail', 'fail_analysis', 'avg_intensity',
-                       'std_intensity', 'fft_ratio',
-                       'std_amplitude', 'avg_valley', 'n_peak', 'std_lambda', 'rms']
-    parameter_names += [p[0]+p[1]
-                        for p in product(['PW10', 'PW25', 'PW50', 'PW80', 'PW90'], ['_mean', '_std'])]
-
-    parameter_annotations = {
-        'up_length': 'Rise Time', 'down_length': 'Peak to End', 'full_down': 'Decay Time',
-        'rd_ratio': 'Rise/Decay', 'freq': 'Peak Frequency', 'maximum': 'Maximum Amplitude',
-        'avg_amplitude': 'Average Peak Amplitude', 'avg_inner_lambda': 'Average Inner Peak Space',
-        'max_combo_peaks': 'Multi-Peak', 'avg_lambda': 'Average Peak Space',
-        'tail_proportion': 'Average Tail Proportion', 'std_inner_lambda': 'σ(Inner Peak Space)',
-        'avg_tail': 'Average Tail Duration', 'std_tail': 'σ(Tail Duration)',
-        'avg_shoulder': 'Average Shoulder Position', 'avg_shoulder_tail': 'Average Shoulder/Tail',
-        'std_shoulder': 'σ(Shoulder Position)', 'fft_ratio': 'FFT Ratio',
-        'std_shoulder_tail': 'σ(Shoulder/Tail)', 'avg_intensity': 'Average Intensity',
-        'std_intensity': 'σ(Average Intensity)', 'std_amplitude': 'σ(Amplitude)',
-        'avg_valley': 'Valley', 'n_peak': 'Peak Count', 'std_lambda': 'σ(Peak Space)',
-        'rms': 'RMS', 'PW10_mean': 'PW10', 'PW10_std': 'σ(PW10)',
-        'PW25_mean': 'PW25', 'PW25_std': 'σ(PW25)', 'PW50_mean': 'PW50', 'PW50_std': 'σ(PW50)',
-        'PW80_mean': 'PW80', 'PW80_std': 'σ(PW80)', 'PW90_mean': 'PW90', 'PW90_std': 'σ(PW90)'}
+    parameter_df = pd.read_csv(os.path.join(crt_path, 'parameters.csv'), index_col=0)
+    parameter_names = parameter_df.index.tolist()
+    parameter_annotations = parameter_df['Annotation'].to_dict()
 
     def __init__(self, item):
         if 'compound' not in item:

@@ -380,8 +380,10 @@ class Waveform:
         return {
             'avg_shoulder': np.mean(shoulder_position) if shoulder_position else 0,
             'avg_shoulder_tail': np.median(shoulder_tail_ratio) if shoulder_tail_ratio else 0,
-            'std_shoulder': np.std(shoulder_amplitudes) if shoulder_amplitudes else 0,
-            'std_shoulder_tail': np.std(shoulder_tail_ratio) if shoulder_tail_ratio else 0
+            'std_shoulder': np.std(shoulder_position) if shoulder_amplitudes else 0,
+            'std_shoulder_tail': np.std(shoulder_tail_ratio) if shoulder_tail_ratio else 0,
+            'avg_shoulder_amp': np.mean(shoulder_amplitudes) if shoulder_amplitudes else 0,
+            'std_shoulder_amp': np.std(shoulder_amplitudes) if shoulder_amplitudes else 0,
         }
 
     def calc_peak_width(self):

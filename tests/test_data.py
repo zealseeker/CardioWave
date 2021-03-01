@@ -39,7 +39,7 @@ class TestData(unittest.TestCase):
             parameters_more, "These parameters are not included in default parameter names")
         default_more = set(data.WaveformFull.parameter_names) - \
             set(parameters.keys())
-        self.assertFalse(default_more, "These parameters are not calculated}")
+        self.assertFalse(default_more, "These parameters are not calculated")
 
     def test_csvloader(self):
         csv_string = """compound,concentration,well,plate,time,signal

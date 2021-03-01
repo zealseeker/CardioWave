@@ -22,5 +22,10 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
+    install_requires=[
+        'statsmodels',
+        'tqdm',
+        'joblib'
+    ],
     zip_safe=False,
 )

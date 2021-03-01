@@ -6,6 +6,7 @@
 __pycache__
 .DS_Store
 *.log
+*.egg-info
 
 # Sphinx documentation
 docs/_build/
