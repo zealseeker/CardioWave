@@ -4,6 +4,7 @@ from sklearn.decomposition import PCA
 from sklearn.decomposition import FactorAnalysis as FA
 from sklearn import preprocessing
 from sklearn.linear_model import LinearRegression
+from scipy.stats import median_absolute_deviation
 import pandas as pd
 import numpy as np
 from tqdm import tqdm
@@ -144,67 +145,83 @@ def remove_low_quality(df: pd.DataFrame):
     return pd.concat(pdfs), removed_wells
 
 
-def normalise_by_negctrl(df: pd.DataFrame, subtract_params: list, divide_params: list, control_compound=None):
+def normalise_by_negctrl(df: pd.DataFrame,
+                         standardiser: str = 'sdm',
+                         standardisers: dict = None,
+                         parameters: list = None,
+                         control_compound: str = 'DMSO'):
     """Normalise the parameters by negative control of the plate
     Due to the fact that there will be one negative control in a plate, we
     use mean to aggragate the parameters.
 
     Args:
-        subtract_params: Parameter list to be subtracted
-        divide_params: Parameter list to be subtracted and then be divided
+        df: DataFrame of parameters got from CardioWave
+        standariser: Method to standardise the datak, including  
+            sdm: Subtract and divide by median of negative control  
+            sm: Subtract by median of negative control  
+            smdmad: Subtract median and divide by median absolute deviation
+        standardisers: A dictionary of which the keys are standarise methods
+            and the values are parameters implementing the standardisers.
         control_compound: The name of control samples in the compound column
 
     Return:
         DataFrame: Normalised parameters
     """
-    parameters = subtract_params + divide_params
+    if parameters is None:
+        parameters = data.WaveformFull.parameter_names
     # TODO remove specific names such as DMSO, NegCtrl
     control_dict = {'GSK': 'DMSO', 'AstraZeneca': 'NegCtrl'}
-
-    def aggregate_negative_control(pdf, name):
-        samples = pdf[pdf['compound'] == name]
-        return samples[parameters].agg('median')
     agg_df_list = []
     for (plate, vendor), pdf in df.groupby(['plate', 'vendor']):
         if control_compound is None:
             control_name = control_dict[vendor]
         else:
             control_name = control_compound
-        control_param = aggregate_negative_control(pdf, control_name)
-        for (compound, _), cdf in pdf.groupby(['compound', 'concentration']):
-            # Sometimes  there is more than one compound-concentration in one plate
-            for _, item in cdf.iterrows():
-                sub_sample = item[subtract_params] - \
-                    control_param[subtract_params]
-                if (control_param[divide_params] == 0).any():
-                    zero = control_param[divide_params]
-                    zero = zero[zero == 0].index
-                    logger.warning("Find zero in %s - %s", plate, zero)
-                div_sample = (item[divide_params] - control_param[divide_params]).divide(
-                    control_param[divide_params])
-                tmp0 = item
-                sample_dict = {'cmp': compound, 'plate': plate,
-                               'concentration': tmp0['concentration'],
-                               'vendor': vendor,
-                               'well': tmp0['well'],
-                               'index': tmp0['index']}
-                sample_dict.update(sub_sample.to_dict())
-                sample_dict.update(div_sample.to_dict())
-                agg_df_list.append(sample_dict)
-    agg_df = pd.DataFrame(agg_df_list)
+        if standardisers is None:
+            standardisers = {standardiser: parameters}
+        control_samples = pdf[pdf['compound'] == control_name]
+        assert pdf.well.duplicated().sum() == 0
+        df_list = []
+        for method in standardisers:
+            samples = []
+            ps = standardisers[method]
+            if method == 'smdmad':
+                mad = median_absolute_deviation(control_samples[ps])
+            median = control_samples[ps].agg('median')
+            for idx, item in pdf.iterrows():
+                if method == 'sm':
+                    sample = item[ps] - median
+                elif method == 'sdm':
+                    sample = (item[ps] - median).divide(median)
+                elif method == 'smdmad':
+                    sample = (item[ps] - median).divide(mad)
+                else:
+                    raise ValueError(f'Method "{method}" is invalid')
+                samples.append(sample)
+            df_list.append(pd.DataFrame(samples, index=pdf.index))
+        tdf = pd.concat(df_list, axis=1)
+        for col in ['compound', 'concentration', 'well', 'vendor', 'plate']:
+            tdf[col] = pdf[col]
+        agg_df_list.append(tdf)
+    agg_df = pd.concat(agg_df_list)
     return agg_df
 
 
-def normalise_by_baseline(df: pd.DataFrame, subtract_params: list, divide_params: list):
+def normalise_by_baseline(df: pd.DataFrame,
+                          subtract_params: list,
+                          divide_params: list,
+                          divide_only_params: list = None):
     """Normalise the parameters by baseline of the well
 
     Args:
         subtract_params: Parameter list to be subtracted only
         divide_params: Parameter list to be subtracted and divided
-
+        divide_only_params: Parameter list to be divided only
     Return:
         DataFrame: Normalised parameters
     """
+    if divide_only_params is None:
+        divide_only_params = []
     if len(set(df.state) & set(['prior', 'treat'])) != 2:
         raise ValueError("states of treat and prior are required")
     agg_df_list = []
@@ -218,6 +235,7 @@ def normalise_by_baseline(df: pd.DataFrame, subtract_params: list, divide_params
         sub_sample = treat[subtract_params] - baseline[subtract_params]
         div_sample = (treat[divide_params] - baseline[divide_params]).divide(
             baseline[divide_params])
+        div_only_sample = treat[divide_only_params].divide(baseline[divide_only_params])
         sample_dict = {'compound': baseline['compound'], 'plate': plate,
                        'concentration': baseline['concentration'],
                        'well': well,
@@ -225,6 +243,7 @@ def normalise_by_baseline(df: pd.DataFrame, subtract_params: list, divide_params
                        'index': treat['index']}
         sample_dict.update(sub_sample.to_dict())
         sample_dict.update(div_sample.to_dict())
+        sample_dict.update(div_only_sample.to_dict())
         agg_df_list.append(sample_dict)
     return pd.DataFrame(agg_df_list)
 

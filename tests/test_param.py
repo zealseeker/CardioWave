@@ -10,9 +10,9 @@ parameters = ['up_length', 'down_length',
 def generate_random_params():
     df = pd.DataFrame({
         'plate': ['A', 'A', 'A', 'A', 'B', 'B', 'B', 'B'],
-        'compound': ['PosCtrl', 'PosCtrl', 'A', 'A', 'PosCtrl', 'PosCtrl', 'A', 'A'],
+        'compound': ['NegCtrl', 'NegCtrl', 'A', 'A', 'NegCtrl', 'NegCtrl', 'A', 'A'],
         'well': ['A1', 'A1', 'A2', 'A2', 'B1', 'B1', 'B2', 'B2'],
-        'state': ['prior', 'treat', 'prior', 'treat', 'prior', ' treat', 'prior', 'treat'],
+        'state': ['prior', 'treat', 'prior', 'treat', 'prior', 'treat', 'prior', 'treat'],
         'concentration': [0, 0, 10, 5, 0, 0, 10, 5],
         'index': [1, 2, 3, 4, 5, 6, 7, 8],
         'vendor': ['AstraZeneca'] * 8
@@ -30,4 +30,13 @@ class TestParam(unittest.TestCase):
         div_params = ['up_length', 'down_length',
                       'full_down', 'freq', 'maximum']
         df = param.normalise_by_baseline(self._data, sub_params, div_params)
+        self.assertTrue(df[parameters].notna().all().all())
+
+    def test_normalise_negctrl(self):
+        sub_params = ['rd_ratio']
+        div_params = ['up_length', 'down_length',
+                      'full_down', 'freq', 'maximum']
+        data = self._data.query('state=="treat"')
+        df = param.normalise_by_negctrl(
+            data, standardisers={'sm': sub_params, 'sdm': div_params}, control_compound='NegCtrl')
         self.assertTrue(df[parameters].notna().all().all())
