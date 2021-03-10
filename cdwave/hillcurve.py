@@ -72,3 +72,9 @@ class HillCurve:
     def calc_perr(self):
         perr = np.sqrt(np.diag(self.pcov))
         return perr
+
+    def predict(self, x):
+        y = fsigmoid(x, *self.popt)
+        y = y * self.p_diff + self.p_min
+        return y
+        

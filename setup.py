@@ -15,7 +15,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     include_package_data=True,
     package_data={
-        'cdwave': ['param_annot.json']
+        'cdwave': ['param_annot.json', 'parameters.csv']
     },
     classifiers=[
         "Programming Language :: Python :: 3",

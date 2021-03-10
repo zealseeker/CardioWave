@@ -1,6 +1,9 @@
 CardioWave: A tool for waveform analysis
 ===
 
+![](https://img.shields.io/pypi/v/CardioWave)
+![](https://img.shields.io/github/workflow/status/zealseeker/cardiowave/Python%20Package%20using%20Conda)
+
 ## Parameters we can calculate
 
 Common waveform parameters include peak count, average peak amplitude, etc. For more details please check
@@ -42,7 +45,7 @@ df = dataset.get_parameter_df()
 df.to_csv(os.path.join(data_path, 'parameters.csv'))
 ```
 
-Considering license issue, GUI has been moved to [CarioWaveGUI](https://github.com/zealseeker/CardioWaveGUI)
+GUI has been moved to [CarioWaveGUI](https://github.com/zealseeker/CardioWaveGUI)
 
 ```sh
 # Run by python package
