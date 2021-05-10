@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from cdwave import param
 
-parameters = ['up_length', 'down_length',
+parameters = ['up_length', 'down_length', 'avg_amplitude', 'std_amplitude',
               'full_down', 'rd_ratio', 'freq', 'maximum']
 
 
@@ -27,15 +27,19 @@ class TestParam(unittest.TestCase):
 
     def test_normalise_baseline(self):
         sub_params = ['rd_ratio']
-        div_params = ['up_length', 'down_length',
-                      'full_down', 'freq', 'maximum']
-        df = param.normalise_by_baseline(self._data, sub_params, div_params)
+        div_params = ['up_length', 'down_length', 'avg_amplitude',
+                      'full_down', 'maximum']
+        div_only_params = ['freq']
+        std_params = {'std_amplitude': 'avg_amplitude'}
+        df = param.normalise_by_baseline(
+            self._data, sub_params, div_params, divide_only_params=div_only_params,
+            std_params=std_params)
         self.assertTrue(df[parameters].notna().all().all())
 
     def test_normalise_negctrl(self):
         sub_params = ['rd_ratio']
-        div_params = ['up_length', 'down_length',
-                      'full_down', 'freq', 'maximum']
+        div_params = ['up_length', 'down_length', 'avg_amplitude',
+                      'full_down', 'freq', 'maximum', 'std_amplitude']
         data = self._data.query('state=="treat"')
         df = param.normalise_by_negctrl(
             data, standardisers={'sm': sub_params, 'sdm': div_params}, control_compound='NegCtrl')

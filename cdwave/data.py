@@ -3,11 +3,13 @@ import pickle
 import gzip
 import logging
 import warnings
+from itertools import product
 import pandas as pd
 from cdwave import fnc
 
 logger = logging.getLogger(__name__)
 crt_path = os.path.abspath(os.path.dirname(__file__))
+
 
 class WaveformFull:
     """WaveformFull contains all the information such as compound name,
@@ -41,7 +43,8 @@ class WaveformFull:
         ...         'well': 'A1'}
         >>> wave = WaveformFull(item)
     """
-    parameter_df = pd.read_csv(os.path.join(crt_path, 'parameters.csv'), index_col=0)
+    parameter_df = pd.read_csv(os.path.join(
+        crt_path, 'parameters.csv'), index_col=0)
     parameter_names = parameter_df.index.tolist()
     parameter_annotations = parameter_df['Annotation'].to_dict()
 
@@ -213,9 +216,9 @@ class DataLoader:
 
     def __init__(self, filepath: str = None, log=None):
         self.filepath = filepath
-        self.dataframe = pd.DataFrame()
+        self.dataframe = pd.DataFrame()  # TODO Remove it
         self.signals = []
-        self.waveforms = []
+        self.waveforms: list[WaveformFull] = []
         self.pbar = None
         if filepath and not os.path.exists(filepath):
             raise Exception(
@@ -285,6 +288,64 @@ class StandardCSVLoader(DataLoader):
             waveform = WaveformFull(input_item)
             self.waveforms.append(waveform)
 
+
+class SeqLoader(DataLoader):
+    def __init__(self, filepath: str, plate: str = None, state: str = None, opts=None, log=None):
+        filename = os.path.basename(filepath)
+        assert filename[-5:] == '.seq1'
+        if plate is None and state is None:
+            plate, state = filename.split('.')[0].split('_')
+        elif plate is None or state is None:
+            raise ValueError("Plate and state should be both None or neither None")
+        self.plate = plate
+        self.state = state
+        self.opts = {'cut': {'pre': 350, 'post': None}} if opts is None else opts
+        super().__init__(filepath, log)
+
+    def parse(self):
+        df = pd.read_csv(self.filepath, sep='\t')
+        time = df.iloc[:, 4].values
+        state = self.state
+        waveforms = []
+        for well in get_wells():
+            input_item = {
+                'plate': self.plate,
+                'well': well,
+                'state': state,
+                'signal':{
+                    'x': time,
+                    'y': df[well].values
+                }
+            }
+            cut_opts = self.opts['cut']
+            if state in cut_opts and cut_opts[state] is not None:
+                cut = cut_opts[state]
+                input_item['signal'] = {'x': time[:cut], 'y': df[well].values[:cut]}
+            waveform = WaveformFull(input_item)
+            waveforms.append(waveform)
+        self.waveforms = waveforms
+
+    def transfer_with_meta(self, df: pd.DataFrame, columns=None) -> Dataset:
+        assert len(df) == len(df.well.unique())
+        df = df.set_index('well')
+        if columns is None:
+            columns = df.columns.tolist()
+        self.parse()
+        waveforms = []
+        for waveform in self.waveforms:
+            well = waveform.profile['well']
+            if well in df.index:
+                for col in columns:
+                    waveform.profile[col] = df.at[well, col]
+                waveforms.append(waveform)
+        dataset = Dataset(self.waveforms)
+        return dataset
+
+
+def get_wells():
+    wells = product(list('ABCDEFGHIJKLMNOP'), range(1,25))
+    wells = ['{}{}'.format(x, y) for x, y in wells]
+    return wells
 
 if __name__ == "__main__":
     print('Number of parameters: {}'.format(len(WaveformFull.parameter_names)))

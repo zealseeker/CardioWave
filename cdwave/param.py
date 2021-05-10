@@ -91,6 +91,9 @@ def remove_well_by_baseline(pdf: pd.DataFrame):
 
 def calc_rcv(x: np.ndarray):
     """Robust coefficient of variation
+    
+    Using the second approch in this paper
+    https://arxiv.org/pdf/1907.01110.pdf
 
     .. math::
 
@@ -210,18 +213,26 @@ def normalise_by_negctrl(df: pd.DataFrame,
 def normalise_by_baseline(df: pd.DataFrame,
                           subtract_params: list,
                           divide_params: list,
-                          divide_only_params: list = None):
+                          divide_only_params: list = None,
+                          std_params: dict = None):
     """Normalise the parameters by baseline of the well
 
     Args:
         subtract_params: Parameter list to be subtracted only
         divide_params: Parameter list to be subtracted and divided
         divide_only_params: Parameter list to be divided only
+        std_params: A dictionary mapping standard deviation parameters to its
+            average parameters, such as {'std_amplitude': 'avg_amplitude'}.
+            Parameters in this dictionary will be processed via following equation:  
+            :math:`std'(A)= \frac{std(A)}{\overline{A}}`
+
     Return:
         DataFrame: Normalised parameters
     """
     if divide_only_params is None:
         divide_only_params = []
+    if std_params is None:
+        std_params = {}
     if len(set(df.state) & set(['prior', 'treat'])) != 2:
         raise ValueError("states of treat and prior are required")
     agg_df_list = []
@@ -236,6 +247,8 @@ def normalise_by_baseline(df: pd.DataFrame,
         div_sample = (treat[divide_params] - baseline[divide_params]).divide(
             baseline[divide_params])
         div_only_sample = treat[divide_only_params].divide(baseline[divide_only_params])
+        std_sample = treat[std_params.keys()].divide(
+            baseline[list(std_params.values())].values)
         sample_dict = {'compound': baseline['compound'], 'plate': plate,
                        'concentration': baseline['concentration'],
                        'well': well,
@@ -244,6 +257,7 @@ def normalise_by_baseline(df: pd.DataFrame,
         sample_dict.update(sub_sample.to_dict())
         sample_dict.update(div_sample.to_dict())
         sample_dict.update(div_only_sample.to_dict())
+        sample_dict.update(std_sample.to_dict())
         agg_df_list.append(sample_dict)
     return pd.DataFrame(agg_df_list)
 
@@ -366,6 +380,12 @@ def npoint_descriptor(df: pd.DataFrame, parameter: str, n: int):
         # res.append(df[parameter].median())
         res.append((df.iloc[3][parameter]+df.iloc[4][parameter])/2)
         res.append(df.iloc[len(df)-1][parameter])
+    elif n == 4:
+        curve = hillcurve.TCPLHill(df['concentration'], df[parameter])
+        res.append(curve.curve_min)
+        res.append(curve.curve_max)
+        res.append(curve.E50)
+        res.append(curve.EC50)
     elif n == 8:
         res = df[parameter].values
         if len(res) != 8:
