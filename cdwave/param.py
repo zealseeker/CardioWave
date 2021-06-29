@@ -1,4 +1,14 @@
+# Copyright (C) 2021 by University of Cambridge
+
+# This software and algorithm was developed as part of the Cambridge Alliance
+# for Medicines Safety (CAMS) initiative, funded by AstraZeneca and
+# GlaxoSmithKline
+
+# This program is made available under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the
+# License, or at your option, any later version.
 import logging
+from typing import List
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
 from sklearn.decomposition import FactorAnalysis as FA
@@ -91,7 +101,7 @@ def remove_well_by_baseline(pdf: pd.DataFrame):
 
 def calc_rcv(x: np.ndarray):
     """Robust coefficient of variation
-    
+
     Using the second approch in this paper
     https://arxiv.org/pdf/1907.01110.pdf
 
@@ -233,6 +243,8 @@ def normalise_by_baseline(df: pd.DataFrame,
         divide_only_params = []
     if std_params is None:
         std_params = {}
+    if 'index' not in df.columns:
+        df = df.reset_index()
     if len(set(df.state) & set(['prior', 'treat'])) != 2:
         raise ValueError("states of treat and prior are required")
     agg_df_list = []
@@ -246,7 +258,8 @@ def normalise_by_baseline(df: pd.DataFrame,
         sub_sample = treat[subtract_params] - baseline[subtract_params]
         div_sample = (treat[divide_params] - baseline[divide_params]).divide(
             baseline[divide_params])
-        div_only_sample = treat[divide_only_params].divide(baseline[divide_only_params])
+        div_only_sample = treat[divide_only_params].divide(
+            baseline[divide_only_params])
         std_sample = treat[std_params.keys()].divide(
             baseline[list(std_params.values())].values)
         sample_dict = {'compound': baseline['compound'], 'plate': plate,
@@ -394,3 +407,23 @@ def npoint_descriptor(df: pd.DataFrame, parameter: str, n: int):
     else:
         raise ValueError("Only 3 or 8 points are supported.")
     return res
+
+
+def calc_4_descriptors(df: pd.DataFrame, parameters: List[str], compounds: List[str]) -> pd.DataFrame:
+    """Calculate four descriptors for each parameter, including minimum concentration,
+    maximum concentration, median concentration and slope of the concentration-response"""
+    suffixes = ['_min', '_median', '_max']
+    res = {'compound': compounds}
+    for p in parameters:
+        for suffix in suffixes:
+            res[p+suffix] = []
+        res[p+'_slope'] = []
+        for compound in compounds:
+            tdf = df[df['compound'] == compound]
+            k = npoint_descriptor(tdf, p, 3)
+            for i, suffix in enumerate(suffixes):
+                res[p+suffix].append(k[i])
+            k, _ = linear_regression_with_logc(tdf, p)
+            res[p+'_slope'].append(k)
+    kdf = pd.DataFrame(res)
+    return kdf

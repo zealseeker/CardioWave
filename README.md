@@ -38,7 +38,7 @@ dataset = loader.transfer()
 
 # Calculate parameters
 derive.calc_parameters_for_waveforms(dataset)
-dataset.save('data.pickle')
+dataset.save('data.pickle.gz')
 
 # Export parameters
 df = dataset.get_parameter_df()

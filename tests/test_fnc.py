@@ -67,12 +67,13 @@ class TestFnc(unittest.TestCase):
         wave.analyse()
         self.assertEqual(wave.peak_uniform_test(), 0)
 
-    @unittest.expectedFailure
     def test_unstable_waveform(self):
         """
         Unstable means that the valleys are fluctuating during the waveform,
         so the prominences will be "inaccurate" leading to the fault double peak
         This is not easy to fix but we can try to use "QC"
+        This test may fail if slightly change the hyper-parameter (threshold) or
+        algorithm.
         """
         wave = self.data.get_waveform('unstable')
         wave.standardise_by_filter()

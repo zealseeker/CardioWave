@@ -14,7 +14,7 @@ class TestHillCurve(unittest.TestCase):
 
     def test_tcpl_gainloss(self):
         hill = hillcurve.TCPLGainLoss(self.data['concentration'], self.data['response'], logit=False)
-        self.assertEqual(len(hill.popt), 6)
+        self.assertEqual(len(hill.popt), 7)
 
     def test_tcpl_plain(self):
         hill = hillcurve.TCPLPlain(self.data['concentration'], self.data['response'], logit=False)

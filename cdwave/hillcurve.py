@@ -1,3 +1,12 @@
+# Copyright (C) 2021 by University of Cambridge
+
+# This software and algorithm was developed as part of the Cambridge Alliance
+# for Medicines Safety (CAMS) initiative, funded by AstraZeneca and
+# GlaxoSmithKline
+
+# This program is made available under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the
+# License, or at your option, any later version.
 import pandas as pd
 import numpy as np
 from scipy.optimize import curve_fit
@@ -30,8 +39,8 @@ def fsigmoid(x, a, x0, k, b):
     return k / (1.0 + np.exp(-a*(x-x0))) + b
 
 
-def gain_loss(x, gw, ga, tp, lw, la, b):
-    return tp * (1/(1+np.exp(gw*(ga-x)))) * (1/(1+np.exp(lw*(x-la)))) + b
+def gain_loss(x, gw, ga, tp, lw, la, s, b):
+    return tp * (1/(1+np.exp(gw*(ga-x)))+s) * (1/(1+np.exp(lw*(x-la)))) + b
 
 
 def plain(x, b):
@@ -145,7 +154,7 @@ class TCPLGainLoss(TCPL):
     fnc = staticmethod(gain_loss)
     name='TCPL-GainLoss'
     def get_bound(self, c_max, c_min):
-        return [0.3, c_min-1, -1, 0.3, c_min-1, 0], [8, c_max+0.5, 1, 18, c_max+0.5, 1]
+        return [0.3, c_min-1, 0, 0.3, c_min-1, 0, 0], [8, c_max+0.5, 1, 18, c_max+0.5, 1, 1]
         
 
 class TCPLPlain(TCPL):
@@ -155,6 +164,7 @@ class TCPLPlain(TCPL):
 
 class HillCurve:
     # Learn from https://github.com/jbloomlab/neutcurve/blob/master/neutcurve/hillcurve.py
+    # Deprecated
     def __init__(self,
                  concentrations: np.ndarray,
                  responses: np.ndarray,

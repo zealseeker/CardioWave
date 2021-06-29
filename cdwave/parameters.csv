@@ -16,20 +16,21 @@ PW80_std,σ(PW80),Deviation,Standard deviation of the peak widths at 80% of prom
 PW90_std,σ(PW90),Deviation,Standard deviation of the peak widths at 90% of prominence
 std_tail,σ(Tail Duration),Deviation,Standard deviation of Tail Duration
 std_shoulder_amp,σ(Shoulder Amplitude),Deviation,The standard deviation of amplitude of shoulder
-rd_ratio,Rise/Decay,Ratio,Average rise time/decay time ratio
-tail_proportion,Tail Proportion,Ratio,The average proportion of tail in one period
-avg_shoulder_tail,Shoulder/Tail,Ratio,The average ratio between prominence of shoulder and tail in a kernel density distribution
+rd_ratio,Average Rise/Decay,Ratio,Average rise time/decay time ratio
+tail_proportion,Average Tail Proportion,Ratio,The average proportion of tail in one period
+avg_shoulder_tail,Average Shoulder/Tail,Ratio,The average ratio between prominence of shoulder and tail in a kernel density distribution
 fft_ratio,FFT Ratio,Ratio,Ratio between second and first peak position in Fast Fourier Transformation
-up_length,Rise Time,Value,Average rise time
-down_length,Decay Time,Value,"Average duration of decreasing waveform, from peak point to the first point lower than valley value plus variance (10% of max)"
+up_length,Average Rise Time,Value,Average rise time
+down_length,Average Decay Time,Value,"Average duration of decreasing waveform, from peak point to the first point lower than valley value plus variance (10% of max)"
 full_down,Peak To End,Value,Average of duration between peak and next starting point
 n_peak,Number of Peaks,Value,Number of peaks
 freq,Peak Frequency,Value,"Number of period for the 100 seconds, 100/Peak Space"
 maximum,Maximum Amplitude,Value,The highest amplitude
+max_intensity,Maximum Intensity,Value,The highest signal in the waveform
 avg_amplitude,Average Peak Amplitude,Value,Average peak amplitude
 avg_intensity,Average Intensity,Value,The average intensity (highest signal in a period)
-rms,RMS,Value,RMS Peak amplitude
-avg_lambda,Peak Space,Value,The average duration of period
+rms,RMS,Value,Root mean square of peak amplitudes
+avg_lambda,Average Peak Space,Value,The average duration of period
 avg_inner_lambda,Average Inner Peak Space,Value,The average duration of periods removing outliers
 avg_tail,Average Tail Duration,Value,The average duration of tail
 avg_valley,Average Valley,Value,The average intensity of valley points
@@ -41,3 +42,4 @@ PW50_mean,PW50,Value,The average of peak width at 50% from peak to bottom
 PW80_mean,PW80,Value,The average of peak width at 80% from peak to bottom
 PW90_mean,PW90,Value,The average of peak width at 90% from peak to bottom
 avg_shoulder_amp,Average Shoulder Amplitude,Value,The average of amplitude of shoulder
+min_intensity,Minimum Intensity,Value,"The minimum signal of the waveform, should be 0 if scaled"

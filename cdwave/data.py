@@ -1,3 +1,12 @@
+# Copyright (C) 2021 by University of Cambridge
+
+# This software and algorithm was developed as part of the Cambridge Alliance
+# for Medicines Safety (CAMS) initiative, funded by AstraZeneca and
+# GlaxoSmithKline
+
+# This program is made available under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the
+# License, or at your option, any later version.
 import os
 import pickle
 import gzip
@@ -12,8 +21,9 @@ crt_path = os.path.abspath(os.path.dirname(__file__))
 
 
 class WaveformFull:
-    """WaveformFull contains all the information such as compound name,
-    concentration or vendor, and all calculated parameters of a waveform.
+    """WaveformFull contains all the information about a sample, such as
+    compound name, concentration or vendor, and all calculated parameters of a
+    waveform.
 
     Attributes:
         profile: A dictionary of The profile of the waveform, including:
@@ -34,6 +44,10 @@ class WaveformFull:
             required keys: signals, plate, well, concentration. item['singal']
             is a dictionary with times (x) and signals (y)
             `{'x': [0.1, 0.2], 'y':[100, 101]}`
+        scale (bool): Whether to scale the minimum to 0. Default is True
+        window_length (int): The length of the filter window (i.e. the number of
+            coefficients). window_length must be a positive odd integer. If set
+            to 0, the waveform will not be smoothed.
 
     Example:
         >>> item = {'signal': {'x': [0.1, 0.2], 'y': [100, 101]},
@@ -48,14 +62,14 @@ class WaveformFull:
     parameter_names = parameter_df.index.tolist()
     parameter_annotations = parameter_df['Annotation'].to_dict()
 
-    def __init__(self, item):
+    def __init__(self, item, scale=True, window_length=5):
         if 'compound' not in item:
             item['compound'] = 'undefined'
         if 'concentration' not in item:
             item['concentration'] = 0
         if 'cpid' not in item:
             item['cpid'] = item['compound']
-        self.signal = self.standardise_signal(item['signal'])
+        self.signal = self.standardise_signal(item['signal'], scale, window_length)
         self.parameters = {x: 0 for x in self.parameter_names}
         self.profile = {
             'plate': str(item['plate']),
@@ -74,15 +88,17 @@ class WaveformFull:
         return d
 
     @staticmethod
-    def standardise_signal(signal: dict):
+    def standardise_signal(signal: dict, scale=True, window_length=5):
         signals = signal['y']
+        minimum = signals.min()
         if len(signals) < 5:
             warnings.warn(
                 "Number of signal is less than 5 and cannot be smoothed")
             return signals
-        signals = fnc.signal_filter(signals)
-        minimum = signals.min()
-        signal['y'] = signals - minimum
+        if window_length != 0:
+            signals = fnc.signal_filter(signals, window_length)
+        if scale:
+            signal['y'] = signals - minimum
         return signal
 
     def get_signal_series(self):
@@ -93,6 +109,7 @@ class WaveformFull:
 
     def get_parameters(self, fillna=0):
         """Return a dictionary with all parameters
+
         Args:
             fillna: If fill na is 'raise', then an exception will be raised when
             a parameter has not been calculated. For other values, it will be used
@@ -151,7 +168,7 @@ class Dataset:
         return dataset
 
     @staticmethod
-    def concat(datasets: list):
+    def concat(datasets: list) -> 'Dataset':
         merged_dataset = datasets[0].copy()
         for dataset in datasets[1:]:
             merged_dataset.merge(dataset)
@@ -159,16 +176,17 @@ class Dataset:
 
     def merge(self, dataset):
         self.waveforms += dataset.waveforms
+        self.size += len(dataset.waveforms)
 
     def copy(self):
-        return Dataset(self.waveforms)
+        return Dataset(self.waveforms.copy())
 
     def get_df(self) -> pd.DataFrame:
         return pd.DataFrame([x.get_dict() for x in self.waveforms])
 
     def get_parameter_df(self) -> pd.DataFrame:
         """Return a dataframe with all papameters for each wave"""
-        df = self.df[self.filterable_columns+['waveform']]
+        df = self.df[self.filterable_columns+['waveform']].copy()
         for parameter in WaveformFull.parameter_names:
             df[parameter] = [x.parameters[parameter] for x in df.waveform]
         for p in ['noise', 'double_peak', 'uniform']:
@@ -176,8 +194,11 @@ class Dataset:
         return df
 
     def save(self, filename, compress=True):
+        # TODO remove _dataframe to save space
         if compress:
-            fp = gzip.open(filename + '.gz', 'wb')
+            if filename[-10:] != '.pickle.gz':
+                filename += '.pickle.gz'
+            fp = gzip.open(filename, 'wb')
         else:
             fp = open(filename, 'wb')
         pickle.dump(self, fp)
@@ -216,7 +237,6 @@ class DataLoader:
 
     def __init__(self, filepath: str = None, log=None):
         self.filepath = filepath
-        self.dataframe = pd.DataFrame()  # TODO Remove it
         self.signals = []
         self.waveforms: list[WaveformFull] = []
         self.pbar = None
@@ -247,7 +267,9 @@ class DataLoader:
 
 
 class StandardCSVLoader(DataLoader):
-    """A loader parsing "standard csv file". The format of the table file is like
+    """A loader parsing "standard csv file".
+    
+    The format of the table file is like
     ```
     compound,concentration,well,plate,time,signal
     CP1,0.1,A1,P1,0,1000
@@ -296,10 +318,12 @@ class SeqLoader(DataLoader):
         if plate is None and state is None:
             plate, state = filename.split('.')[0].split('_')
         elif plate is None or state is None:
-            raise ValueError("Plate and state should be both None or neither None")
+            raise ValueError(
+                "Plate and state should be both None or neither None")
         self.plate = plate
         self.state = state
-        self.opts = {'cut': {'pre': 350, 'post': None}} if opts is None else opts
+        self.opts = {'cut': {'pre': 350, 'post': None}
+                     } if opts is None else opts
         super().__init__(filepath, log)
 
     def parse(self):
@@ -312,7 +336,7 @@ class SeqLoader(DataLoader):
                 'plate': self.plate,
                 'well': well,
                 'state': state,
-                'signal':{
+                'signal': {
                     'x': time,
                     'y': df[well].values
                 }
@@ -320,7 +344,8 @@ class SeqLoader(DataLoader):
             cut_opts = self.opts['cut']
             if state in cut_opts and cut_opts[state] is not None:
                 cut = cut_opts[state]
-                input_item['signal'] = {'x': time[:cut], 'y': df[well].values[:cut]}
+                input_item['signal'] = {
+                    'x': time[:cut], 'y': df[well].values[:cut]}
             waveform = WaveformFull(input_item)
             waveforms.append(waveform)
         self.waveforms = waveforms
@@ -338,14 +363,15 @@ class SeqLoader(DataLoader):
                 for col in columns:
                     waveform.profile[col] = df.at[well, col]
                 waveforms.append(waveform)
-        dataset = Dataset(self.waveforms)
+        dataset = Dataset(waveforms)
         return dataset
 
 
 def get_wells():
-    wells = product(list('ABCDEFGHIJKLMNOP'), range(1,25))
+    wells = product(list('ABCDEFGHIJKLMNOP'), range(1, 25))
     wells = ['{}{}'.format(x, y) for x, y in wells]
     return wells
+
 
 if __name__ == "__main__":
     print('Number of parameters: {}'.format(len(WaveformFull.parameter_names)))

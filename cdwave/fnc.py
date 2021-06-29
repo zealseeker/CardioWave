@@ -1,3 +1,12 @@
+# Copyright (C) 2021 by University of Cambridge
+
+# This software and algorithm was developed as part of the Cambridge Alliance
+# for Medicines Safety (CAMS) initiative, funded by AstraZeneca and
+# GlaxoSmithKline
+
+# This program is made available under the terms of the GNU General Public
+# License as published by the Free Software Foundation, either version 3 of the
+# License, or at your option, any later version.
 import logging
 import pandas as pd
 import numpy as np
@@ -22,12 +31,13 @@ class Waveform:
 
     Attributes:
         df (pd.DataFrame): The main dataframe of the waveform, including several important
-            columns peak: 1: main peak, 2-x: double peaks; status: 0: normal,
-            1: raising point, 2: peak, 3: down starting;
+            columns, peak: 1: main peak, 2-x: double peaks; status: 0: normal,
+            1: raising point, 2: peak, 3: down starting; category: 0-9: intensities
+            are categorised into 10 levels in terms of the `span`.
         num_peak (int): Number of peaks
         n (int): Number of points
-        maximum (int): Maximum of amplitudes
-        minimum (int): Minimum of amplitudes
+        maximum (int): Maximum of intensity
+        minimum (int): Minimum of intensity
     """
     max_shoulder_tail_ratio = 2.5
 
@@ -40,14 +50,15 @@ class Waveform:
         self.n = len(self.df)
         self.maximum = self.series.max()
         self.minimum = self.series.min()
-        self.variance = (self.maximum - self.minimum) / 10
+        self.span = self.maximum - self.minimum
+        self.variance = self.span / 10
         self.group_valley = {}
         self.fail_analysis = False
         self._group = None
 
     @property
     def group(self):
-        """Return a iterator of group (i, gdf),excluding the first and the last"""
+        """Return a iterator of group (i, gdf), excluding the first and the last"""
         def iterator():
             for i, gdf in self._group:
                 if i in (self.num_peak, 0):
@@ -55,14 +66,15 @@ class Waveform:
                 yield i, gdf
         if self._group is None:
             if self.num_peak == 0:
-                raise ValueError("Cannot get group before getting peak")
+                raise ValueError("Cannot get group before peak detection")
             self._group = self.df.groupby('group')
         return iterator()
 
     def regroup(self):
         """After the peaks are changed, the groups need to be recalculated
+
         This function calculate the number of peaks and re-define the group
-        number of each point
+        number of each point.
         """
         df = self.df
         last_point = 0
@@ -130,10 +142,11 @@ class Waveform:
 
     def analyse(self):
         """Analyse the status of each point
-        The status indicates the thrend of the point, such as rasing and
-        declining. For waveforms of which frequency is high than 10, it will
-        identify double peaks via their prominences. This function also
-        calculates the valley possitions.
+
+        The status indicates the thrend of the point, such as risng and
+        declining. For waveforms with a frequency higher than 10, it will
+        identify double peaks according their prominences and tail duration.
+        This function also calculates the valley possitions.
         """
         self.get_valleys()
         # Check if there is less then 10 points between two peaks
@@ -194,7 +207,7 @@ class Waveform:
         # opt_series is to prioritise early points
         opt_series = series - series.index * 0.0001
         if prominence is None:
-            prominence = max(20, 0.1*self.maximum)
+            prominence = max(20, 0.1*self.span)
         peaks, properties = find_peaks(
             opt_series, height=height, prominence=prominence)
         prominences = properties['prominences']
@@ -238,7 +251,7 @@ class Waveform:
         Returns:
             Always True
         """
-        if self.maximum < 250:
+        if self.span < 250:
             prominences_t = 0.5
         else:
             prominences_t = 0.7
@@ -380,7 +393,7 @@ class Waveform:
         return {
             'avg_shoulder': np.mean(shoulder_position) if shoulder_position else 0,
             'avg_shoulder_tail': np.median(shoulder_tail_ratio) if shoulder_tail_ratio else 0,
-            'std_shoulder': np.std(shoulder_position) if shoulder_amplitudes else 0,
+            'std_shoulder': np.std(shoulder_position) if shoulder_position else 0,
             'std_shoulder_tail': np.std(shoulder_tail_ratio) if shoulder_tail_ratio else 0,
             'avg_shoulder_amp': np.mean(shoulder_amplitudes) if shoulder_amplitudes else 0,
             'std_shoulder_amp': np.std(shoulder_amplitudes) if shoulder_amplitudes else 0,
@@ -417,8 +430,11 @@ class Waveform:
         parameters = {
             'avg_amplitude': amplitudes.mean() if valleys else 0,
             'std_amplitude': amplitudes.std() if valleys else 0,
+            'maximum': amplitudes.max() if valleys else 0,
             'avg_intensity': intensities.mean(),
             'std_intensity': intensities.std(),
+            'max_intensity': self.maximum,
+            'min_intensity': self.minimum,
             'avg_valley': np.mean(valleys) if valleys else 0,
             'rms': rms
         }
@@ -473,7 +489,7 @@ class Waveform:
             ks_p = self.peak_uniform_test(interpolation=True)
         else:
             ks_p = self.peak_uniform_test()
-        parameters = {'maximum': self.maximum, 'double_peak': is_double_peak,
+        parameters = {'double_peak': is_double_peak,
                       'uniform': ks_p > 0.99, 'noise': self._noise_test(),
                       'n_peak': self.num_peak, 'max_combo_peaks': max_combo_peaks,
                       'fail_analysis': self.fail_analysis,
@@ -671,24 +687,6 @@ class Waveform:
         series = pd.Series(
             new_signals, index=self.series.index, name=self.series.name)
         self.__init__(series)
-
-
-def draw_multiple(figure, df, span=0):
-    def make_slice(array):
-        if span > 0:
-            return array[:span]
-        else:
-            return array
-    n = len(df)  # Only support 8 now
-    if n > 8:
-        logger.warning("Only the first 8 waveforms are shown")
-        df = df.iloc[:8]
-    figure.clear()
-    axes = figure.subplots(2, 4, sharex='all', sharey='all')
-    for i, row in df.reset_index().iterrows():
-        ax = axes[i//4][i % 4]
-        ax.plot(make_slice(row.signal['x']), make_slice(row.signal['y']), '-')
-        ax.set_title('{:.3f}'.format(row['concentration']))
 
 
 def wave_transform(signals: np.ndarray, sample_rate=100, method='fft'):
