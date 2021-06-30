@@ -228,13 +228,13 @@ def normalise_by_baseline(df: pd.DataFrame,
     """Normalise the parameters by baseline of the well
 
     Args:
-        subtract_params: Parameter list to be subtracted only
-        divide_params: Parameter list to be subtracted and divided
-        divide_only_params: Parameter list to be divided only
+        subtract_params: Parameter list to be subtracted only.
+        divide_params: Parameter list to be subtracted and divided.
+        divide_only_params: Parameter list to be divided only.
         std_params: A dictionary mapping standard deviation parameters to its
-            average parameters, such as {'std_amplitude': 'avg_amplitude'}.
-            Parameters in this dictionary will be processed via following equation:  
-            :math:`std'(A)= \frac{std(A)}{\overline{A}}`
+            average parameters, such as `{'std_amplitude': 'avg_amplitude'}`.
+            Parameters in this dictionary will be processed via following
+            equation. :math:`std(A)= \\frac{std(A)}{\\overline{A}}`
 
     Return:
         DataFrame: Normalised parameters

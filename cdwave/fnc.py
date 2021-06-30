@@ -188,26 +188,28 @@ class Waveform:
                 Success = False
         return Success
 
-    def get_peaks(self, height=None, prominence=None):
+    def get_peaks(self, height=None, prominence=None, min_prominence=20, span_ratio=0.1):
         """Identify the peaks and group of the whole waveform
 
         Args:
-            height: number or ndarray or sequence, optional Required height of peaks.
+            height: Number or ndarray or sequence, optional Required height of peaks.
                 Either a number, None, an array matching x or a 2-element sequence of the former.
                 The first element is always interpreted as the minimal and the second,
                 if supplied, as the maximal required height.
-            prominence: number or ndarray or sequence, optional Required prominence of peaks.
+            prominence: Number or ndarray or sequence, optional Required prominence of peaks.
                 Either a number, None, an array matching x or a 2-element sequence of the former.
                 The first element is always interpreted as the minimal and the second, if supplied,
-                as the maximal required prominence. The default value is the maximum of 20 and 10%
-                of maximum amplitude.
+                as the maximal required prominence. If None, the minimal prominence will be the
+                `max(min_prominence, span_ratio*self.span)`
+            min_prominence: The absolute minimal prominence
+            span_ratio: The ratio of span as the prominence threshold
         """
         series = self.df[self.name]
         self.df['category'] = (series - self.minimum) // self.variance
         # opt_series is to prioritise early points
         opt_series = series - series.index * 0.0001
         if prominence is None:
-            prominence = max(20, 0.1*self.span)
+            prominence = max(min_prominence, span_ratio*self.span)
         peaks, properties = find_peaks(
             opt_series, height=height, prominence=prominence)
         prominences = properties['prominences']

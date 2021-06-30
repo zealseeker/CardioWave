@@ -3,13 +3,20 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Calcium waveform analysis's documentation!
+Welcome to CardioWave documentation!
 =====================================================
+
+:Release: |release|
+:Date: |today|
+
+|License|	|Pypilatest|
+
 
 .. toctree::
    :maxdepth: 4
-   :caption: Table and Contents
 
+   install
+   usage
    source/cdwave
 
 Parameters we can calculate
@@ -23,3 +30,5 @@ Indices and tables
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
+
+.. include:: substitutions.rst

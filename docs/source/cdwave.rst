@@ -1,14 +1,6 @@
 cdwave package
 ==============
 
-Subpackages
------------
-
-.. toctree::
-   :maxdepth: 4
-
-   cdwave.viewer
-
 Submodules
 ----------
 
@@ -59,6 +51,7 @@ cdwave.param module
    :members:
    :undoc-members:
    :show-inheritance:
+
 
 Module contents
 ---------------
