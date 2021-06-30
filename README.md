@@ -3,6 +3,7 @@ CardioWave: A tool for waveform analysis
 
 ![](https://img.shields.io/pypi/v/CardioWave)
 ![](https://img.shields.io/github/workflow/status/zealseeker/cardiowave/Python%20Package%20using%20Conda)
+[![Documentation Status](https://readthedocs.org/projects/cardiowave/badge/?version=latest)](https://cardiowave.readthedocs.io/en/latest/?badge=latest)
 
 ## Parameters we can calculate
 
