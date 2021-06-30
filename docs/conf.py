@@ -12,8 +12,9 @@
 #
 import os
 import sys
-import cdwave
 sys.path.insert(0, os.path.abspath('..'))
+import cdwave
+
 
 # -- Project information -----------------------------------------------------
 
