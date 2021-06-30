@@ -78,6 +78,8 @@ All the packages required are included in the lastest Anaconda envrionment.
 
 ## Make documents
 
+0. Matplotlib is required to render pictures
+
 1. Generate source code of documents
 ```
 sphinx-apidoc -o docs/source -f cdwave
