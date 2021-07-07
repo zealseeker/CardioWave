@@ -53,6 +53,8 @@ class TCPL:
                  concentration_unit=-6,
                  boundary='auto',
                  logit=True):
+        if (concentrations<=0).sum() > 0:
+            raise ValueError("Concentration of 0 or less is invalid.")
         if logit:
             concentrations = concentrations.apply(
                 np.log10) + concentration_unit
@@ -154,7 +156,7 @@ class TCPLGainLoss(TCPL):
     fnc = staticmethod(gain_loss)
     name='TCPL-GainLoss'
     def get_bound(self, c_max, c_min):
-        return [0.3, c_min-1, 0, 0.3, c_min-1, 0, 0], [8, c_max+0.5, 1, 18, c_max+0.5, 1, 1]
+        return [0.3, c_min-1, 0.01, 0.3, c_min-1, 0, 0], [8, c_max+0.5, 1, 18, c_max+0.5, 1, 1]
         
 
 class TCPLPlain(TCPL):

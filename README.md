@@ -29,6 +29,7 @@ Optional columns include 'cpid' (compound ID) and 'vendor'. Other columns will
 not be used.
 
 ```py
+import pandas as pd
 from cdwave import data
 from cdwave import derive
 

@@ -25,6 +25,7 @@ not be used.
 
 .. code-block:: python
 
+    import pandas as pd
     from cdwave import data
     from cdwave import derive
 

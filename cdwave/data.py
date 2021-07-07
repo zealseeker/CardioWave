@@ -13,6 +13,7 @@ import gzip
 import logging
 import warnings
 from itertools import product
+from typing import List
 import pandas as pd
 from cdwave import fnc
 
@@ -141,7 +142,7 @@ class Dataset:
         waveforms: A list of WaveformFull objects
     """
 
-    def __init__(self, waveforms: list = None):
+    def __init__(self, waveforms: List[WaveformFull] = None):
         self.waveforms = waveforms
         self._dataframe = None
         self.filtered_df = None
@@ -161,7 +162,7 @@ class Dataset:
             fp = open(filepath, 'rb')
         else:
             return None
-        dataset = pickle.load(fp)
+        dataset: 'Dataset' = pickle.load(fp)
         dataset.dataframe = dataset.get_df()
         dataset.filtered_df = dataset.dataframe
         fp.close()

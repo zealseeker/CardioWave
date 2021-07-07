@@ -27,7 +27,10 @@ class Waveform:
     """Class for waveform analysis
 
     Args:
-        series: A series of which the name is the well name, values are amplitudes
+        series (pd.Series): A series of which the name is the well name, values
+            are amplitudes.
+        index_penalty (float): Add penalty to signals to prioritise former time
+            point during peak detection.
 
     Attributes:
         df (pd.DataFrame): The main dataframe of the waveform, including several important
@@ -41,8 +44,10 @@ class Waveform:
     """
     max_shoulder_tail_ratio = 2.5
 
-    def __init__(self, series):
-        self.series = series
+    def __init__(self, series: pd.Series, index_penalty: float = 0.000001):
+        # opt_series is to prioritise early points
+        opt_series = series - series.index * index_penalty
+        self.series = opt_series
         self.name = series.name
         self.num_peak = 0
         self.df = pd.DataFrame(series).reset_index()
@@ -206,12 +211,10 @@ class Waveform:
         """
         series = self.df[self.name]
         self.df['category'] = (series - self.minimum) // self.variance
-        # opt_series is to prioritise early points
-        opt_series = series - series.index * 0.0001
         if prominence is None:
             prominence = max(min_prominence, span_ratio*self.span)
         peaks, properties = find_peaks(
-            opt_series, height=height, prominence=prominence)
+            series, height=height, prominence=prominence)
         prominences = properties['prominences']
         self.df['peak'] = 0
         self.df['prominence'] = 0
@@ -726,7 +729,7 @@ def wave_transform(signals: np.ndarray, sample_rate=100, method='fft'):
     elif method == 'welch':
         frq, psd = welch(signals, fs=100, nperseg=len(signals)-1)
     else:
-        raise ValueError('The method is not Support')
+        raise ValueError('The method is not available')
     return frq, psd
 
 
