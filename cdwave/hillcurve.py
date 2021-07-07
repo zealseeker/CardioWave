@@ -53,9 +53,9 @@ class TCPL:
                  concentration_unit=-6,
                  boundary='auto',
                  logit=True):
-        if (concentrations<=0).sum() > 0:
-            raise ValueError("Concentration of 0 or less is invalid.")
         if logit:
+            if (concentrations<=0).sum() > 0:
+                raise ValueError("Concentration of 0 or less is invalid.")
             concentrations = concentrations.apply(
                 np.log10) + concentration_unit
         if boundary == 'auto':

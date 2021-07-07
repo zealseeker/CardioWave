@@ -48,6 +48,7 @@ class Waveform:
         # opt_series is to prioritise early points
         opt_series = series - series.index * index_penalty
         self.series = opt_series
+        self.series.name = series.name
         self.name = series.name
         self.num_peak = 0
         self.df = pd.DataFrame(series).reset_index()
