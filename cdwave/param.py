@@ -14,6 +14,7 @@ from sklearn.decomposition import PCA
 from sklearn.decomposition import FactorAnalysis as FA
 from sklearn import preprocessing
 from sklearn.linear_model import LinearRegression
+from sklearn.preprocessing import StandardScaler
 from scipy.stats import median_absolute_deviation
 import pandas as pd
 import numpy as np
@@ -423,7 +424,23 @@ def calc_4_descriptors(df: pd.DataFrame, parameters: List[str], compounds: List[
             k = npoint_descriptor(tdf, p, 3)
             for i, suffix in enumerate(suffixes):
                 res[p+suffix].append(k[i])
-            k, _ = linear_regression_with_logc(tdf, p)
+            try:
+                k, _ = linear_regression_with_logc(tdf, p, error=0)
+            except (KeyError, ValueError) as e:
+                logger.error("Cannot calculate the slope of %s - %s", compound, p)
+                raise e
             res[p+'_slope'].append(k)
     kdf = pd.DataFrame(res)
     return kdf
+
+
+def calc_grit(df: pd.DataFrame, parameter: str):
+    control_dist = df.loc[df['compound']=='DMSO', [parameter]].values
+    target_dist = df.loc[df['compound']!='DMSO', [parameter]].values
+    assert len(df['compound'].unique()) == 2, 'Only two compounds can be included'
+    control_std = control_dist.std()
+    assert control_std !=0, 'DMSO has not variance.'
+    scaler = StandardScaler()
+    scaler.fit(control_dist)
+    scores = scaler.transform(target_dist)
+    return pd.Series(scores, index=target_dist.index)

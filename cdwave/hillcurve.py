@@ -46,7 +46,15 @@ def gain_loss(x, gw, ga, tp, lw, la, s, b):
 def plain(x, b):
     return b
 
+
 class TCPL:
+    """Implementation of ToxCast Pipeline
+
+    Attribution:
+        k (int): Number of estimated parameters
+        n (int): Number of data points
+    """
+
     def __init__(self,
                  concentrations: np.ndarray,
                  responses: np.ndarray,
@@ -54,7 +62,7 @@ class TCPL:
                  boundary='auto',
                  logit=True):
         if logit:
-            if (concentrations<=0).sum() > 0:
+            if (concentrations <= 0).sum() > 0:
                 raise ValueError("Concentration of 0 or less is invalid.")
             concentrations = concentrations.apply(
                 np.log10) + concentration_unit
@@ -75,11 +83,13 @@ class TCPL:
         self.c_max = c_max
         self.c_min = c_min
         self.rmsd = None
+        self.rss = None
+        self.n = len(responses)
         self.bound = self.get_bound(c_max, c_min)
         if self.bound and self.fnc:
             popt, pcov = self.fit(self.fnc)
             self.popt, pcov = popt, pcov
-    
+
     def get_bound(self, c_max, c_min):
         raise NotImplementedError()
         # return None
@@ -89,38 +99,43 @@ class TCPL:
             fnc, self.concentrations, self.p_response, method='dogbox',
             bounds=self.bound)
         return popt, pcov
-    
-    @property
-    def EC50(self):
-        if len(self.popt)>1:
-            return self.popt[1]
+
+    def EC50(self, unit='logM') -> float:
+        if len(self.popt) > 1:
+            pM = self.popt[1]
+            if unit == 'logM':
+                return pM
+            elif unit == 'uM':
+                return np.power(10, pM + 6)
+            elif unit == 'M':
+                return np.power(10, pM)
         else:
-            return None
-    
+            return np.nan
+
     @property
-    def E50(self):
+    def E50(self) -> float:
         if self.EC50:
             return self.predict(self.EC50)
+        else:
+            return np.nan
+
+    @property
+    def curve_diff(self):
+        if len(self.popt > 1):
+            return np.abs(self.popt[2]) * self.p_diff
         else:
             return None
 
     @property
-    def curve_diff(self):
-        if len(self.popt>1):
-            return np.abs(self.popt[2]) * self.p_diff
-        else:
-            return None
-    
-    @property
     def curve_min(self):
-        if len(self.popt>1):
+        if len(self.popt > 1):
             return self.popt[-1] * self.p_diff + self.p_min
         else:
             return None
-    
+
     @property
     def curve_max(self):
-        if len(self.popt>1):
+        if len(self.popt > 1):
             return np.abs(self. popt[2]) * self.p_diff + self.p_min
         else:
             return None
@@ -133,6 +148,14 @@ class TCPL:
             self.rmsd = np.linalg.norm(y_true-y_pred)
         return self.rmsd
 
+    @property
+    def RSS(self):
+        if self.rss is None:
+            y_true = self.responses
+            y_pred = np.vectorize(self.predict)(self.concentrations)
+            self.rss = np.sum((y_true - y_pred)**2)
+        return self.rss
+
     def calc_perr(self):
         perr = np.sqrt(np.diag(self.pcov))
         return perr
@@ -142,27 +165,49 @@ class TCPL:
         y = y * self.p_diff + self.p_min
         return y
 
+    @property
+    def AIC(self):
+        """Akaike information criterion
+
+        The likelihood is simplified by calculating RSS(MAE)
+        https://www.tandfonline.com/doi/pdf/10.1080/21642583.2018.1496042
+
+        Also see Comparison with least squares in 
+        https://en.wikipedia.org/wiki/Akaike_information_criterion
+        """
+        L = self.n * np.log(self.RSS/self.n)
+        aic = 2 * self.k + L
+        return aic
+
+
 class TCPLHill(TCPL):
     fnc = staticmethod(fsigmoid)
+    k = 4
+
     def get_bound(self, c_max, c_min):
         return [0.3, c_min-1, -1, 0], [8, c_max+0.5, 1, 1]
 
     @property
     def hill(self):
-        return self.popt[0] * np.sign(self.popt[3])
+        return self.popt[0] * np.sign(self.popt[2])
 
 
 class TCPLGainLoss(TCPL):
+    k = 7
     fnc = staticmethod(gain_loss)
-    name='TCPL-GainLoss'
+    name = 'TCPL-GainLoss'
+
     def get_bound(self, c_max, c_min):
         return [0.3, c_min-1, 0.01, 0.3, c_min-1, 0, 0], [8, c_max+0.5, 1, 18, c_max+0.5, 1, 1]
-        
+
 
 class TCPLPlain(TCPL):
+    k = 1
     fnc = staticmethod(plain)
+
     def get_bound(self, *args):
         return [-1], [1]
+
 
 class HillCurve:
     # Learn from https://github.com/jbloomlab/neutcurve/blob/master/neutcurve/hillcurve.py

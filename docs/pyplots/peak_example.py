@@ -1,3 +1,4 @@
+#%%
 from matplotlib import pyplot as plt
 import pandas as pd
 from scipy.signal import find_peaks
@@ -6,7 +7,7 @@ from cdwave import fnc
 df = pd.read_csv('peak-example.csv', index_col=0)
 f, axes = plt.subplots(1,2, figsize=(8, 4), sharey='all')
 
-# left plot
+#%% left plot
 series = df.set_index('time1')['signal1']
 opt_series = series - series.index * 0.0001
 span = series.max() - series.min()
@@ -29,7 +30,7 @@ ax.set_xlabel('Time(s)')
 ax.set_title('Example 1')
 ax.set_ylabel('RFU')
 
-# right plot
+#%% right plot
 series = df.set_index('time2')['signal2']
 series.index.name = 'time'
 wave = fnc.Waveform(series)
