@@ -83,8 +83,16 @@ def parameter_correlation(df: pd.DataFrame, parameters: list = None):
     return corr
 
 
-def remove_well_by_baseline(pdf: pd.DataFrame):
-    """Remove wells by baseline (prior)
+def remove_well_by_baseline(pdf: pd.DataFrame) -> list:
+    """Remove wells by the quality of baseline (pre-measurement)
+
+    When the quality of baseline is low under the following critera, the well
+    should be removed.
+
+    1. There is at least one multi-peak
+    2. standard deviation of peak space is higher than 1
+    3. maximum amplitude is lower than 100
+    4. Some key time point (such as decay point) cannot be recognised
 
     Args:
         pdf: DataFrame of one plate
@@ -100,7 +108,7 @@ def remove_well_by_baseline(pdf: pd.DataFrame):
     return wells
 
 
-def calc_rcv(x: np.ndarray):
+def calc_rcv(x: np.ndarray) -> float:
     """Robust coefficient of variation
 
     Using the second approch in this paper
@@ -126,10 +134,15 @@ def calc_rcv(x: np.ndarray):
 
 def remove_low_quality(df: pd.DataFrame):
     """Remove waveforms with low quality
-    The low quality includes:
+
+    Wells of a plate will be removed if:
 
     1. Double peak in negative control
-    2. Low quality in baseline
+    2. High standard deviation of peak space in negative control
+    3. Low quality in baseline. See :func:`~remove_well_by_baseline`
+    
+    The whole plate will be removed if RCV is higher than 0.
+    See :func:`~calc_rcv`
 
     Args:
         df: A dataframe of all the samples with parameters
@@ -163,7 +176,7 @@ def normalise_by_negctrl(df: pd.DataFrame,
                          standardiser: str = 'sdm',
                          standardisers: dict = None,
                          parameters: list = None,
-                         control_compound: str = 'DMSO'):
+                         control_compound: str = 'DMSO') -> pd.DataFrame:
     """Normalise the parameters by negative control of the plate
     Due to the fact that there will be one negative control in a plate, we
     use mean to aggragate the parameters.
@@ -225,7 +238,7 @@ def normalise_by_baseline(df: pd.DataFrame,
                           subtract_params: list,
                           divide_params: list,
                           divide_only_params: list = None,
-                          std_params: dict = None):
+                          std_params: dict = None) -> pd.DataFrame:
     """Normalise the parameters by baseline of the well
 
     Args:

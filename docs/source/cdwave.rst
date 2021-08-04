@@ -11,6 +11,7 @@ cdwave.data module
    :members:
    :undoc-members:
    :show-inheritance:
+   :exclude-members: parameter_annotations, parameter_df, parameter_names
 
 cdwave.derive module
 --------------------

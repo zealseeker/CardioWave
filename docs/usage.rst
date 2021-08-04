@@ -1,8 +1,8 @@
 Get Started with CardioWave
 ===========================
 
-Examples
-~~~~~~~~
+Examples of basic useage
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 Prepare a CSV table like this format:
@@ -39,8 +39,8 @@ not be used.
     dataset.save('data.pickle.gz')
 
     # Export parameters
-    df = dataset.get_parameter_df()
-    df.to_csv(os.path.join(data_path, 'parameters.csv'))
+    parameter_df = dataset.get_parameter_df()
+    parameter_df.to_csv(os.path.join(data_path, 'parameters.csv'))
 
 Advanced Usage
 ~~~~~~~~~~~~~~
@@ -264,3 +264,169 @@ are sub-peaks (Megenta points in figure on the right).
     Theratically we can fix it by calculatingthe duration between the first
     sub-peak and the starting point. But it is not implemented yet as we don't
     use the samples with multi-peaks.
+
+
+Process the parameters
+~~~~~~~~~~~~~~~~~~~~~~
+
+After deriving the parameters, we will get a dataframe (``parameter_df``) like
+the following table. The the compound name of vehicle control is supposed to be
+DMSO.
+
+======== ============= ==== ===== ==============
+compound concentration well plate ..parameters..
+======== ============= ==== ===== ==============
+CP1      0.1           A1   P1    ...           
+CP1      0.5           A2   P1    ...           
+...      ...           ...  ...   ...           
+DMSO                   A5   P1    ...          
+...      ...           ...  ...   ...        
+======== ============= ==== ===== ==============
+
+Quality control and Normalisation
+---------------------------------
+
+The parameters cannot be used directly because of batch effects and variance
+of cells. We need to do quality control to remove samples with low quality and
+normalise the parameters based on pre-measurement and/or vehicle control.
+
+Quality control can be implemented by 
+`remove_low_quality <source/cdwave.html#cdwave.param.remove_low_quality>`_.
+
+Wells of a plate will be removed if:
+
+1. Double peak in negative control
+2. High standard deviation of peak space in negative control
+3. Low quality in baseline.
+   
+For any case of the following critera, the well will be removed due to the low
+quality of baseline:
+
+1. There is at least one multi-peak
+2. standard deviation of peak space is higher than 1
+3. maximum amplitude is lower than 100
+4. Some key time point (such as decay point) cannot be recognised
+
+Then RCV will be calculated from the DMSO samples of each plate
+
+.. math::
+
+    MAD = med | x_i - m |
+
+    RCV_M = 1.4826 * \frac{MAD}{m}
+
+If RCV >= 0.2, the whole plate will be removed.
+
+Normalisation can be done by
+`normalise_by_baseline <source/cdwave.html#cdwave.param.normalise_by_baseline>`_
+and 
+`normalise_by_negctrl <source/cdwave.html#cdwave.param.normalise_by_negctrl>`_.
+
+Normally we have two ways to normalise the parameters. For value types such as
+peak frequency, we suggest using subtraction and division, while for ratio type
+and deviation type, we suggest subtraction only.
+
+.. math::
+
+    freq \% = \frac{freq - freq_{baseline}}{freq_{baseline}}
+
+    \sigma(Peak\ Space) \% = \sigma(Peak\ Space) - \sigma(Peak\ Space)_{baseline}
+
+If we don't have baseline data, then we can use the median value of DMSO.
+
+if we have the baseline, we need to normalise again to avoid batch effect.
+
+.. math::
+
+    freq_{DMSO}\% = \frac{freq_{DMSO} - freq_{baseline}}{freq_{baseline}}
+
+    \sigma(Peak\ Space) \% = \sigma(Peak\ Space) - \sigma(Peak\ Space)_{baseline}
+
+    freq \%\% = freq\% - DMSO\%
+
+If we have baseline waveforms, the suggest workflow is like the following.
+
+.. code-block:: python
+
+    value_parameters = ['freq', 'avg_amplitude', 'PW10_mean']
+    ratio_parameters = ['shoulder_tail_ratio']
+    std_parameters = ['std_amplitude', 'PW10_std']
+    subtract_parameters = ratio_parameters + std_parameters
+    divide_parameters = value_parameters
+    all_parameters = subtract_parameters + divide_parameters
+
+    parameter_df = waveform.get_parameter_df() # Get parameters
+    parameter_df, removed_wells = param.remove_low_quality(parameter_df)
+    norm_df = param.normalise_by_baseline(
+        parameter_df, subtract_parameters, divide_parameters)
+    norm_df = param.normalise_by_negctrl(
+        parameter_df, 'sm', parameters=all_parameters)
+
+If baseline is not available, we need to normalise by negative control.
+
+.. code-block:: python
+    
+    standardiser = {'sdm': divide_parameters, 'sm': subtract_parameters}
+    norm_df = param.normalise_by_negctrl(parameter_df, standardiser)
+
+
+Derive IC50 values
+------------------
+After deriving parameters of the waveforms, we can then derive IC50 values by
+analysing the concentration response.
+
+ToxCast Pipeline (TCPL) is implemented. Three curves will be fitted:
+
+1. Hill model
+2. Gain-Loss model
+3. Constant model
+
+.. image:: https://www.epa.gov/sites/default/files/2017-11/toxcast_dose_response_chart.png
+
+Different from TCPL, CardioWave use the following equation to fit Gain-Loss
+model, considering that the parameter would increase from 0 and then reduce to
+a negative value.
+
+.. math::
+
+    \mu = tp (\frac{1}{1+10^{gw(ga-x)}+s})
+        (\frac{1}{1+10^{lw(x-la)}}) + b
+
+The following is an example of how to derive IC50 of peak frequency for Aspirin.
+
+.. code-block:: python
+    
+    # norm_df is normalised parameters. See previous section
+    compounds = norm_df['compound'].unique()
+    dmso_df = norm_df[norm_df['compound'] == 'DMSO']
+    cmp_df = norm_df[norm_df['compound'] == compound]
+    conc, resp = cmp_df.concentration, cmp_df['freq']
+    for fnc in [hillcurve.TCPLHill, hillcurve.TCPLGainLoss, hillcurve.TCPLPlain]:
+        try:
+            curves.append(fnc(conc, resp))
+        except Exception as e:
+            pass
+    for curve in curves:
+        label = '{}-{:.2f}'.format(type(curve).__name__, curve.EC50)
+        fnc = np.vectorize(curve.predict)
+        ax.plot(cc, fnc(cc), label=label)
+    ax.plot(curve.concentrations, curve.responses, 'o', label='Response')
+    # Get noise band
+    s = dmso_df['freq'].replace(np.inf, np.nan)
+    band = s.dropna().std()
+    ax.fill_between(cc, -band, band, hatch='////', alpha=0.4,
+                    edgecolor='green', linewidth=0, facecolor='white')
+
+`AIC <source/cdwave.html#cdwave.hillcurve.TCPL.AIC>`_
+(Akaike information criterion)
+can be used to evaluate which model is better
+in fitting the concentration response. RSS (residual sum of squares) is used as
+the likelihood function. K is the number of estimated parameters. 
+
+.. math::
+    
+    RSS = \sum_{i=1}^{N}(y_{i}-\hat{y})
+
+    Likelihood = -\frac{N}{2}ln(RSS/N)
+
+    AIC = 2K - 2 Likelihood

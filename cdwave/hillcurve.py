@@ -14,6 +14,7 @@ from scipy.optimize import curve_fit
 
 def fit_parameter(df: pd.DataFrame, parameter):
     """Fit the S curve of concentration-response
+    (deprecated)
 
     Args:
         df: Dataframe from the dataset
@@ -49,6 +50,15 @@ def plain(x, b):
 
 class TCPL:
     """Implementation of ToxCast Pipeline
+
+    Args:
+        concentration: A numpy array of concentrations
+        responess: A number array of parameters responding to the concentrations
+        concentration_unit: The unit of the concentration. -6 means uM.
+        boundary: Boundary of the model for fitting. Take `auto` to use the
+            default boundary, defined in the `get_bound`.
+        logit: Whether to take the logirithm of the concentrations. If the
+            input concentration is not in logirthm (e.g. uM), use `True`.
 
     Attribution:
         k (int): Number of estimated parameters
@@ -115,7 +125,7 @@ class TCPL:
     @property
     def E50(self) -> float:
         if self.EC50:
-            return self.predict(self.EC50)
+            return self.predict(self.EC50())
         else:
             return np.nan
 
@@ -183,6 +193,7 @@ class TCPL:
 class TCPLHill(TCPL):
     fnc = staticmethod(fsigmoid)
     k = 4
+    name = 'TCPL-Hill'
 
     def get_bound(self, c_max, c_min):
         return [0.3, c_min-1, -1, 0], [8, c_max+0.5, 1, 1]
@@ -204,6 +215,7 @@ class TCPLGainLoss(TCPL):
 class TCPLPlain(TCPL):
     k = 1
     fnc = staticmethod(plain)
+    name = 'TCPL-Constant'
 
     def get_bound(self, *args):
         return [-1], [1]
