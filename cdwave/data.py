@@ -213,6 +213,31 @@ class Dataset:
             fp = open(filename, 'wb')
         pickle.dump(self, fp)
         fp.close()
+    
+    def export_raw(self, filename=None, compression='infer'):
+        """Export the row data into a csv file with the columns of
+        compound,concentration,well,plate,time,signal
+        """
+        rows = []
+        for waveform in self.waveforms:
+            profile = waveform.profile
+            times = waveform.signal['x']
+            signals = waveform.signal['y']
+            for t, s in zip(times, signals):
+                rows.append({
+                    'compound': profile['compound'],
+                    'well': profile['well'],
+                    'plate': profile['plate'],
+                    'concentration': profile['concentration'],
+                    'state': profile['state'],
+                    'time': t,
+                    'signal': s
+                })
+        df = pd.DataFrame(rows)
+        if filename:
+            df.to_csv(filename, compression=compression)
+            return None
+        return df
 
     @property
     def df(self):
@@ -305,14 +330,16 @@ class StandardCSVLoader(DataLoader):
             df = pd.read_csv(self.filepath)
         required_columns = ['plate', 'compound',
                             'concentration', 'well', 'time', 'signal']
-        attribute_columns = ['plate', 'compound',
+        attribute_columns = ['plate', 'compound', 'state',
                              'concentration', 'well', 'cpid', 'vendor']
         miss_column = set(required_columns) - set(df.columns)
         if miss_column:
             raise KeyError('Column {} is missing'.format(miss_column))
-        if df.duplicated(['plate', 'well', 'time']).any():
+        if 'state' not in df.columns:
+            df['state'] = 'treat'
+        if df.duplicated(['plate', 'well', 'time', 'state']).any():
             raise ValueError('Find duplicacy in set')
-        for _, gdf in df.groupby(['plate', 'well']):
+        for _, gdf in df.groupby(['plate', 'well', 'state']):
             item = gdf.iloc[0]
             input_item = {x: item[x] for x in attribute_columns if x in item}
             signal = {'x': gdf['time'].values, 'y': gdf['signal'].values}
