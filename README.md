@@ -39,12 +39,16 @@ loader = data.StandardCSVLoader(data=df)
 dataset = loader.transfer()
 
 # Calculate parameters
+# The calculated parameters will be included in the dataset
 derive.calc_parameters_for_waveforms(dataset)
+
+# Save and load dataset
 dataset.save('data.pickle.gz')
+dataset = Data.loaddata('data.pickle.gz')
 
 # Export parameters
-df = dataset.get_parameter_df()
-df.to_csv(os.path.join(data_path, 'parameters.csv'))
+parameter_df = dataset.get_parameter_df()
+parameter_df.to_csv(os.path.join(data_path, 'parameters.csv'))
 ```
 
 GUI has been moved to [CarioWaveGUI](https://github.com/zealseeker/CardioWaveGUI)
