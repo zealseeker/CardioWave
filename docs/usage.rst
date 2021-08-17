@@ -93,10 +93,17 @@ parameters with a threshold.
 
 .. code-block:: python
 
-    def calc_parameter_with_threshold(waveform: WaveformFull, threshold) -> dict:
+    def calc_parameter_with_threshold(waveform: WaveformFull, threshold, method='prominence') -> dict:
+        """Calculate parameters of a waveform"""
         series = waveform.get_signal_series()
         wave = Waveform(series)
-        if not wave.get_peaks(height=threshold):
+        if method == 'height':
+            res = wave.get_peaks(height=threshold)
+        elif method == 'prominence':
+            res = wave.get_peaks(prominence=threshold)
+        else:
+            raise ValueError(f"Method {method} is not supported. Please use 'height' or 'prominence'")
+        if not res:
             return None
         wave.analyse()
         try:

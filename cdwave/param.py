@@ -8,6 +8,7 @@
 # License as published by the Free Software Foundation, either version 3 of the
 # License, or at your option, any later version.
 import logging
+import warnings
 from typing import List
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
@@ -104,7 +105,7 @@ def remove_well_by_baseline(pdf: pd.DataFrame) -> list:
     wells = df[(df['max_combo_peaks'] > 1) |
                (df['std_lambda'] > 1) |
                (df['maximum'] < 100) |
-               (df['fail_analysis'] == 'FALSE')]['well'].tolist()
+               (df['fail_analysis'] == True)]['well'].tolist()
     return wells
 
 
@@ -140,7 +141,7 @@ def remove_low_quality(df: pd.DataFrame):
     1. Double peak in negative control
     2. High standard deviation of peak space in negative control
     3. Low quality in baseline. See :func:`~remove_well_by_baseline`
-    
+
     The whole plate will be removed if RCV is higher than 0.
     See :func:`~calc_rcv`
 
@@ -159,8 +160,9 @@ def remove_low_quality(df: pd.DataFrame):
         removed_wells[plate].update(
             {x: 'low baseline' for x in removing_wells})
         pdf = pdf[~pdf['well'].isin(removing_wells)]
-        removing_wells = pdf[pdf['compound'].isin(['NegCtrl', 'DMSO']) &
-                             ((pdf['max_combo_peaks'] > 1) | (pdf['std_lambda'] > 1))]['well'].tolist()
+        removing_wells = pdf[pdf['compound'].isin(['NegCtrl', 'DMSO']) & (
+            (pdf['max_combo_peaks'] > 1) | (pdf['std_lambda'] > 1) | (
+                pdf['fail_analysis'] == True))]['well'].tolist()
         removed_wells[plate].update({x: 'double peak' for x in removing_wells})
         pdf = pdf[~pdf['well'].isin(removing_wells)]
         rcv = calc_rcv(pdf[pdf['compound'].isin(['NegCtrl', 'DMSO'])]['freq'])
@@ -174,8 +176,8 @@ def remove_low_quality(df: pd.DataFrame):
 
 def normalise_by_negctrl(df: pd.DataFrame,
                          standardiser: str = 'sdm',
-                         standardisers: dict = None,
                          parameters: list = None,
+                         standardisers: dict = None,
                          control_compound: str = 'DMSO') -> pd.DataFrame:
     """Normalise the parameters by negative control of the plate
     Due to the fact that there will be one negative control in a plate, we
@@ -183,12 +185,14 @@ def normalise_by_negctrl(df: pd.DataFrame,
 
     Args:
         df: DataFrame of parameters got from CardioWave
-        standariser: Method to standardise the datak, including  
+        standardiser: Method to standardise the datak, including  
             sdm: Subtract and divide by median of negative control  
             sm: Subtract by median of negative control  
             smdmad: Subtract median and divide by median absolute deviation
+        parameters: A list of parameters which will be normalised
         standardisers: A dictionary of which the keys are standarise methods
             and the values are parameters implementing the standardisers.
+            This will override standardiser and parameters.
         control_compound: The name of control samples in the compound column
 
     Return:
@@ -199,15 +203,15 @@ def normalise_by_negctrl(df: pd.DataFrame,
     # TODO remove specific names such as DMSO, NegCtrl
     control_dict = {'GSK': 'DMSO', 'AstraZeneca': 'NegCtrl'}
     agg_df_list = []
+    if standardisers is None:
+        standardisers = {standardiser: parameters}
     for (plate, vendor), pdf in df.groupby(['plate', 'vendor']):
         if control_compound is None:
             control_name = control_dict[vendor]
         else:
             control_name = control_compound
-        if standardisers is None:
-            standardisers = {standardiser: parameters}
         control_samples = pdf[pdf['compound'] == control_name]
-        assert pdf.well.duplicated().sum() == 0
+        assert pdf.well.duplicated().sum() == 0, f'Find duplicated wells in plate {plate}'
         df_list = []
         for method in standardisers:
             samples = []
@@ -266,6 +270,8 @@ def normalise_by_baseline(df: pd.DataFrame,
         baseline = cdf[cdf['state'] == 'prior']
         treat = cdf[cdf['state'] == 'treat']
         if len(baseline) != 1 or len(treat) != 1:
+            if len(baseline) > 1 or len(treat) > 1:
+                warnings.warn(f'{plate} - {well} is not unique in either prior or treat')
             continue
         baseline = baseline.iloc[0]
         treat = treat.iloc[0]
@@ -440,7 +446,8 @@ def calc_4_descriptors(df: pd.DataFrame, parameters: List[str], compounds: List[
             try:
                 k, _ = linear_regression_with_logc(tdf, p, error=0)
             except (KeyError, ValueError) as e:
-                logger.error("Cannot calculate the slope of %s - %s", compound, p)
+                logger.error(
+                    "Cannot calculate the slope of %s - %s", compound, p)
                 raise e
             res[p+'_slope'].append(k)
     kdf = pd.DataFrame(res)
@@ -448,11 +455,12 @@ def calc_4_descriptors(df: pd.DataFrame, parameters: List[str], compounds: List[
 
 
 def calc_grit(df: pd.DataFrame, parameter: str):
-    control_dist = df.loc[df['compound']=='DMSO', [parameter]].values
-    target_dist = df.loc[df['compound']!='DMSO', [parameter]].values
-    assert len(df['compound'].unique()) == 2, 'Only two compounds can be included'
+    control_dist = df.loc[df['compound'] == 'DMSO', [parameter]].values
+    target_dist = df.loc[df['compound'] != 'DMSO', [parameter]].values
+    assert len(df['compound'].unique()
+               ) == 2, 'Only two compounds can be included'
     control_std = control_dist.std()
-    assert control_std !=0, 'DMSO has not variance.'
+    assert control_std != 0, 'DMSO has not variance.'
     scaler = StandardScaler()
     scaler.fit(control_dist)
     scores = scaler.transform(target_dist)

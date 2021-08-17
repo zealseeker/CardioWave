@@ -194,7 +194,7 @@ class Waveform:
                 Success = False
         return Success
 
-    def get_peaks(self, height=None, prominence=None, min_prominence=20, span_ratio=0.1):
+    def get_peaks(self, height=None, prominence=None, min_prominence=20, span_ratio=0.1) -> bool:
         """Identify the peaks and group of the whole waveform
 
         Args:

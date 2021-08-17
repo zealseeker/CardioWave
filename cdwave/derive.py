@@ -104,12 +104,11 @@ def calc_parameters_with_threshold(dataset: Dataset,
 
     Args:
         dataset: The waveform dataset
-        process_fnc: A processing function used to send out the progress,
-            see `default_process_fnc`, which uses tqdm
-        batch: Batch size for multi-processing
+        threshold: The threshold
         processes: Number of processors
-        custom_calculator: A custom calculator which can setup the custom thresholds.
-            If `None`, `calc_parameter` will be used by default.
+        custom_calculator: A custom calculator which can setup the custom
+            thresholds. If `None`, :func:`~calc_parameter_with_threshold` will
+            be used by default.
     """
     if processes is None:
         try:
@@ -126,11 +125,17 @@ def calc_parameters_with_threshold(dataset: Dataset,
             waveform.parameters = p
 
 
-def calc_parameter_with_threshold(waveform: WaveformFull, threshold) -> dict:
+def calc_parameter_with_threshold(waveform: WaveformFull, threshold, method='prominence') -> dict:
     """Calculate parameters of a waveform"""
     series = waveform.get_signal_series()
     wave = Waveform(series)
-    if not wave.get_peaks(height=threshold):
+    if method == 'height':
+        res = wave.get_peaks(height=threshold)
+    elif method == 'prominence':
+        res = wave.get_peaks(prominence=threshold)
+    else:
+        raise ValueError(f"Method {method} is not supported. Please use 'height' or 'prominence'")
+    if not res:
         return None
     wave.analyse()
     try:
