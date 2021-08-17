@@ -42,6 +42,9 @@ not be used.
     parameter_df = dataset.get_parameter_df()
     parameter_df.to_csv(os.path.join(data_path, 'parameters.csv'))
 
+    # Load dataset
+    dataset = Dataset.loaddata('data.pickle.gz')
+
 Advanced Usage
 ~~~~~~~~~~~~~~
 
@@ -355,6 +358,8 @@ If we have baseline waveforms, the suggest workflow is like the following.
 
 .. code-block:: python
 
+    from cdwave import param
+
     value_parameters = ['freq', 'avg_amplitude', 'PW10_mean']
     ratio_parameters = ['shoulder_tail_ratio']
     std_parameters = ['std_amplitude', 'PW10_std']
@@ -362,7 +367,7 @@ If we have baseline waveforms, the suggest workflow is like the following.
     divide_parameters = value_parameters
     all_parameters = subtract_parameters + divide_parameters
 
-    parameter_df = waveform.get_parameter_df() # Get parameters
+    parameter_df = dataset.get_parameter_df() # Get parameters
     parameter_df, removed_wells = param.remove_low_quality(parameter_df)
     norm_df = param.normalise_by_baseline(
         parameter_df, subtract_parameters, divide_parameters)
