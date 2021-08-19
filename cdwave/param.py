@@ -187,10 +187,11 @@ def normalise_by_negctrl(df: pd.DataFrame,
 
     Args:
         df: DataFrame of parameters got from CardioWave
-        standardiser: Method to standardise the datak, including  
-            sdm: Subtract and divide by median of negative control  
-            sm: Subtract by median of negative control  
-            smdmad: Subtract median and divide by median absolute deviation
+        standardiser: Method to standardise the datak, including
+
+            - sdm: Subtract and divide by median of negative control
+            - sm: Subtract by median of negative control
+            - smdmad: Subtract median and divide by median absolute deviation
         parameters: A list of parameters which will be normalised
         standardisers: A dictionary of which the keys are standarise methods
             and the values are parameters implementing the standardisers.
@@ -221,7 +222,7 @@ def normalise_by_negctrl(df: pd.DataFrame,
             if method == 'smdmad':
                 mad = median_absolute_deviation(control_samples[ps])
             median = control_samples[ps].agg('median')
-            for idx, item in pdf.iterrows():
+            for _, item in pdf.iterrows():
                 if method == 'sm':
                     sample = item[ps] - median
                 elif method == 'sdm':
@@ -322,38 +323,8 @@ def select_concentration_by_log(df: pd.DataFrame, c: float):
     return df.loc[ids]
 
 
-def calc_inflection(df: pd.DataFrame, parameters=None, min_n=4):
-    if parameters is None:
-        parameters = ['freq', 'rms', 'PW10_mean']
-    items = []
-    for (plate, cmp), cdf in tqdm(df.groupby(['plate', 'cmp'])):
-        item = {'plate': plate, 'cmp': cmp}
-        if len(cdf) <= min_n:
-            continue
-        for parameter in parameters:
-            cs = cdf['concentration']
-            fs = cdf[parameter]
-            try:
-                curve = hillcurve.HillCurve(cs, fs)
-            except ValueError:
-                print(plate, cmp)
-                continue
-            perr = curve.calc_perr()
-            if perr[2] > np.abs(curve.popt[2]):
-                # A magic number, to be improved
-                item[f'{parameter}_EC50'] = -4.3
-            else:
-                item[f'{parameter}_EC50'] = curve.EC50
-            # item[f'{parameter}_EC50_std'] = min(perr[1], 10)
-            item[f'{parameter}_DIS'] = curve.curve_diff
-            # item[f'{parameter}_DIS_std'] = min(perr[2], 10)
-        items.append(item)
-    return pd.DataFrame(items)
-
-
 def select_plates(df: pd.DataFrame, t=0.2):
-    """If the amplitude and freq of the lowest concentration is out of +- 0.2
-    then remove the plate
+    """Remove plates when amplitude and freq of the lowest concentration is out of +- 0.2
 
     Args:
         df: input dataframe of the parameters

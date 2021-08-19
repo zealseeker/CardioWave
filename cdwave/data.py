@@ -24,9 +24,10 @@ crt_path = os.path.abspath(os.path.dirname(__file__))
 class WaveformFull:
 
     """
-    WaveformFull contains all the information about a sample, such as
-    compound name, concentration or vendor, and all calculated parameters of a
-    waveform.
+    WaveformFull contains all the information about a sample.
+    
+    The information includes compound name, concentration or vendor, and all
+    calculated parameters of a waveform.
 
     Attributes:
         profile: A dictionary of The profile of the waveform, including:
@@ -132,6 +133,7 @@ class WaveformFull:
 
 
 class Dataset:
+
     """
     A dataset contains a list of WaveformFull objects and a meta table
     with the information and parameters of the waveforms
@@ -217,7 +219,7 @@ class Dataset:
             fp = open(filename, 'wb')
         pickle.dump(self, fp)
         fp.close()
-    
+
     def export_raw(self, filename=None, compression='infer'):
         """
         Export the row data into a csv file with the columns of

@@ -408,8 +408,9 @@ The following is an example of how to derive IC50 of peak frequency for Aspirin.
 
 .. code-block:: python
     
+    from cdwave import hillcurve
     # norm_df is normalised parameters. See previous section
-    compounds = norm_df['compound'].unique()
+    compound = 'Aspirin'
     dmso_df = norm_df[norm_df['compound'] == 'DMSO']
     cmp_df = norm_df[norm_df['compound'] == compound]
     conc, resp = cmp_df.concentration, cmp_df['freq']
@@ -418,6 +419,10 @@ The following is an example of how to derive IC50 of peak frequency for Aspirin.
             curves.append(fnc(conc, resp))
         except Exception as e:
             pass
+    # Plot figure
+    fig, ax = plt.subplots()
+    # You may also need to check whether there is no curve
+    cc = np.arange(curves[0].c_min, curves[0].c_max, 0.01)
     for curve in curves:
         label = '{}-{:.2f}'.format(type(curve).__name__, curve.EC50)
         fnc = np.vectorize(curve.predict)

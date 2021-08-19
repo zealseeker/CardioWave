@@ -1,6 +1,5 @@
 import sys
 import pandas as pd
-from cdwave import data
 sys.path.append('.')
 
 print('Reading parameter file ...')

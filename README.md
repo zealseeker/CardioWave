@@ -2,6 +2,7 @@
 
 ![](https://img.shields.io/pypi/v/CardioWave)
 ![](https://img.shields.io/github/workflow/status/zealseeker/cardiowave/Python%20Package%20using%20Conda)
+![](https://img.shields.io/codacy/grade/2a5804469cc44f2f8643f28bd3ca9bfa)
 ![](https://img.shields.io/codacy/coverage/2a5804469cc44f2f8643f28bd3ca9bfa)
 [![Documentation Status](https://readthedocs.org/projects/cardiowave/badge/?version=latest)](https://cardiowave.readthedocs.io/en/latest/?badge=latest)
 

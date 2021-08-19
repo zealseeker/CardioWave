@@ -186,7 +186,7 @@ class TCPL:
         The likelihood is simplified by calculating RSS(MAE)
         https://www.tandfonline.com/doi/pdf/10.1080/21642583.2018.1496042
 
-        Also see Comparison with least squares in 
+        Also see Comparison with least squares in
         https://en.wikipedia.org/wiki/Akaike_information_criterion
         """
         L = self.n * np.log(self.RSS/self.n)
@@ -221,7 +221,7 @@ class TCPLPlain(TCPL):
     fnc = staticmethod(plain)
     name = 'TCPL-Constant'
 
-    def get_bound(self, *args):
+    def get_bound(self, c_max, c_min):
         return [-1], [1]
 
 

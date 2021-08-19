@@ -220,8 +220,7 @@ class Waveform:
         prominences = properties['prominences']
         self.df['peak'] = 0
         self.df['prominence'] = 0
-        for i in range(len(peaks)):
-            peak = peaks[i]
+        for i, peak in enumerate(peaks):
             p = prominences[i]
             if i == 0:
                 p = series[peak] - series[properties['right_bases'][i]]

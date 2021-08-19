@@ -1,5 +1,4 @@
 import unittest
-import warnings
 import pandas as pd
 from cdwave import hillcurve
 

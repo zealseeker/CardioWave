@@ -4,7 +4,8 @@ import pandas as pd
 from cdwave import param
 
 parameters = ['up_length', 'down_length', 'avg_amplitude', 'std_amplitude',
-              'full_down', 'rd_ratio', 'freq', 'maximum']
+              'full_down', 'rd_ratio', 'freq', 'maximum', 'max_combo_peaks',
+              'std_lambda']
 
 
 def generate_random_params():
@@ -19,6 +20,7 @@ def generate_random_params():
     })
     for p in parameters:
         df[p] = np.random.random(8)
+    df['fail_analysis'] = False
     return df
 
 
@@ -31,16 +33,25 @@ class TestParam(unittest.TestCase):
                       'full_down', 'maximum']
         div_only_params = ['freq']
         std_params = {'std_amplitude': 'avg_amplitude'}
+        all_params = sub_params + div_params + div_only_params + ['std_amplitude']
         df = param.normalise_by_baseline(
             self._data, sub_params, div_params, divide_only_params=div_only_params,
             std_params=std_params)
-        self.assertTrue(df[parameters].notna().all().all())
+        self.assertTrue(df[all_params].notna().all().all())
 
     def test_normalise_negctrl(self):
         sub_params = ['rd_ratio']
         div_params = ['up_length', 'down_length', 'avg_amplitude',
                       'full_down', 'freq', 'maximum', 'std_amplitude']
+        all_params = sub_params + div_params
         data = self._data.query('state=="treat"')
         df = param.normalise_by_negctrl(
             data, standardisers={'sm': sub_params, 'sdm': div_params}, control_compound='NegCtrl')
-        self.assertTrue(df[parameters].notna().all().all())
+        self.assertTrue(df[all_params].notna().all().all())
+
+    def test_low_quality(self):
+        df = self._data
+        df, removed_wells = param.remove_low_quality(df)
+        for plate in removed_wells:
+            wells = removed_wells[plate]
+            self.assertEqual(len(df[(df['plate']==plate)&(df['well'].isin(wells))]), 0)
