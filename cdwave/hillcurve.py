@@ -13,7 +13,8 @@ from scipy.optimize import curve_fit
 
 
 def fit_parameter(df: pd.DataFrame, parameter):
-    """Fit the S curve of concentration-response
+    """
+    Fit the S curve of concentration-response
     (deprecated)
 
     Args:
@@ -49,7 +50,9 @@ def plain(x, b):
 
 
 class TCPL:
-    """Implementation of ToxCast Pipeline
+
+    """
+    Implementation of ToxCast Pipeline
 
     Args:
         concentration: A numpy array of concentrations
@@ -145,7 +148,7 @@ class TCPL:
 
     @property
     def curve_max(self):
-        if len(self.popt > 1):
+        if len(self.popt) > 1:
             return np.abs(self. popt[2]) * self.p_diff + self.p_min
         else:
             return None
@@ -177,7 +180,8 @@ class TCPL:
 
     @property
     def AIC(self):
-        """Akaike information criterion
+        """
+        Akaike information criterion
 
         The likelihood is simplified by calculating RSS(MAE)
         https://www.tandfonline.com/doi/pdf/10.1080/21642583.2018.1496042

@@ -1,8 +1,8 @@
-CardioWave: A tool for waveform analysis
-===
+# CardioWave: A tool for waveform analysis
 
 ![](https://img.shields.io/pypi/v/CardioWave)
 ![](https://img.shields.io/github/workflow/status/zealseeker/cardiowave/Python%20Package%20using%20Conda)
+![](https://img.shields.io/codacy/coverage/2a5804469cc44f2f8643f28bd3ca9bfa)
 [![Documentation Status](https://readthedocs.org/projects/cardiowave/badge/?version=latest)](https://cardiowave.readthedocs.io/en/latest/?badge=latest)
 
 ## Parameters we can calculate
@@ -83,14 +83,13 @@ All the packages required are included in the lastest Anaconda envrionment.
 
 ## Make documents
 
-0. Matplotlib is required to render pictures
+0.  Matplotlib is required to render pictures
 
-1. Generate source code of documents
+1.  Generate source code of documents
 ```
 sphinx-apidoc -o docs/source -f cdwave
 ```
-2. Build
+2.  Build
 ```
 sphinx-build docs docs/_build
 ```
-

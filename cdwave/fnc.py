@@ -171,7 +171,8 @@ class Waveform:
             self.analyse_normal_waves()
 
     def check_status_points(self):
-        """A debugging function checking whether any period has more than 1 or
+        """
+        A debugging function checking whether any period has more than 1 or
         has not starting point or downing point.
         """
         Success = True
@@ -485,7 +486,7 @@ class Waveform:
         return P_minor / P_main
 
     def get_parameters(self):
-        """Get all parameters from the waveform"""
+        """Get all parameters from the waveform."""
         df = self.df
         is_double_peak = (df['peak'] > 1).any()
         max_combo_peaks = df['peak'].max()
@@ -696,7 +697,8 @@ class Waveform:
 
 
 def wave_transform(signals: np.ndarray, sample_rate=100, method='fft'):
-    """Transform the wave using methods such as Fourier transformation
+    """
+    Transform the wave using methods such as Fourier transformation
 
     Args:
         signals (np.ndarray): resampled signals from waveform

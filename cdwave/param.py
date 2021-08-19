@@ -47,7 +47,8 @@ def aggrate_parameters(df: pd.DataFrame,
                        parameters: list = None, method="median",
                        compound_column='uniname',
                        plates: dict = None):
-    """Aggregate the parameters of the same compound under the same concentration
+    """
+    Aggregate the parameters of the same compound under the same concentration
     by methods such as median or mean
 
     Args:
@@ -85,7 +86,8 @@ def parameter_correlation(df: pd.DataFrame, parameters: list = None):
 
 
 def remove_well_by_baseline(pdf: pd.DataFrame) -> list:
-    """Remove wells by the quality of baseline (pre-measurement)
+    """
+    Remove wells by the quality of baseline (pre-measurement)
 
     When the quality of baseline is low under the following critera, the well
     should be removed.

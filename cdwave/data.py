@@ -22,7 +22,9 @@ crt_path = os.path.abspath(os.path.dirname(__file__))
 
 
 class WaveformFull:
-    """WaveformFull contains all the information about a sample, such as
+
+    """
+    WaveformFull contains all the information about a sample, such as
     compound name, concentration or vendor, and all calculated parameters of a
     waveform.
 
@@ -110,7 +112,8 @@ class WaveformFull:
         return se
 
     def get_parameters(self, fillna=0):
-        """Return a dictionary with all parameters
+        """
+        Return a dictionary with all parameters
 
         Args:
             fillna: If fill na is 'raise', then an exception will be raised when
@@ -129,7 +132,8 @@ class WaveformFull:
 
 
 class Dataset:
-    """A dataset contains a list of WaveformFull objects and a meta table
+    """
+    A dataset contains a list of WaveformFull objects and a meta table
     with the information and parameters of the waveforms
 
     Attributes:
@@ -215,7 +219,8 @@ class Dataset:
         fp.close()
     
     def export_raw(self, filename=None, compression='infer'):
-        """Export the row data into a csv file with the columns of
+        """
+        Export the row data into a csv file with the columns of
         compound,concentration,well,plate,time,signal
         """
         rows = []
@@ -252,6 +257,7 @@ class Dataset:
 
     def filter_by_filters(self, filters, replace=True):
         """
+
         Args:
             filters: a dictionary of {column: value}
         return:
@@ -284,7 +290,8 @@ class DataLoader:
             self.log = log
 
     def transfer(self) -> Dataset:
-        """Parse the waveform from tables and generate a dataset
+        """
+        Parse the waveform from tables and generate a dataset
 
         Returns:
             Dataset: The dataset containing all the waveforms and parameters
@@ -302,7 +309,9 @@ class DataLoader:
 
 
 class StandardCSVLoader(DataLoader):
-    """A loader parsing "standard csv file".
+    
+    """
+    A loader parsing "standard csv file".
 
     The format of the table file is like::
         
