@@ -55,11 +55,11 @@ def calc_parameters_for_waveforms(dataset: Dataset,
     """Calculate parameter for waveforms
 
     Args:
-        dataset: The waveform dataset
+        dataset: The waveform dataset.
         process_fnc: A processing function used to send out the progress,
             see `default_process_fnc`, which uses tqdm
-        batch: Batch size for multi-processing
-        processes: Number of processors
+        batch: Batch size for multi-processing.
+        processes: Number of processors.
         custom_calculator: A custom calculator which can setup the custom thresholds.
             If `None`, `calc_parameter` will be used by default.
     """

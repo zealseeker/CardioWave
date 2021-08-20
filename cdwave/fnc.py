@@ -535,7 +535,7 @@ class Waveform:
         """
         if series is None:
             series = self.series
-        elif type(series) == str:
+        elif isinstance(series, str):
             series = self.df[series]
         figure.clear()
         ax1 = figure.add_subplot(111)
@@ -682,7 +682,6 @@ class Waveform:
         """
         x = self.df['time']
         y = self.df[self.name]
-        # new_y = savgol_filter(y, 5, 2)
         x_new = np.linspace(x.min(), x.max(), int(x.max()*sample_rate+1))
         interp = UnivariateSpline(x, y, k=3)
         return interp(x_new)

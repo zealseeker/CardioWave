@@ -19,7 +19,6 @@ from sklearn.preprocessing import StandardScaler
 from scipy.stats import median_absolute_deviation
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
 from cdwave import data
 from cdwave import hillcurve
 logger = logging.getLogger(__name__)

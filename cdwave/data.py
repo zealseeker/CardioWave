@@ -15,6 +15,7 @@ import warnings
 from itertools import product
 from typing import List
 import pandas as pd
+import numpy as np
 from cdwave import fnc
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ class WaveformFull:
 
     """
     WaveformFull contains all the information about a sample.
-    
+
     The information includes compound name, concentration or vendor, and all
     calculated parameters of a waveform.
 
@@ -291,7 +292,7 @@ class DataLoader:
         else:
             self.log = log
 
-    def transfer(self) -> Dataset:
+    def transfer(self, validate=True, sort=False) -> Dataset:
         """
         Parse the waveform from tables and generate a dataset
 
@@ -299,10 +300,27 @@ class DataLoader:
             Dataset: The dataset containing all the waveforms and parameters
         """
         self.log('Start parsing....')
-        self.parse()
+        input_items = self.parse()
+        waveforms = []
+        if validate or sort:
+            for input_item in input_items:
+                t = input_item['signal']['x']
+                if len(np.where(np.diff(t) <= 0)[0] > 0):
+                    if sort:
+                        df = pd.DataFrame(input_item['signal'])
+                        df.sort_values(by='x', inplace=True)
+                        input_item['signal'] = {'x': df.x, 'y': df.y}
+                    else:
+                        warnings.warn('Find non-increasing time series - {} - {} - {}. '
+                                      'Please make sure the time is increasing or use `sort`'.format(
+                                          input_item['plate'], input_item['well'], input_item['compound']
+                                      ))
+        for input_item in input_items:
+            waveform = WaveformFull(input_item)
+            waveforms.append(waveform)
+        dataset = Dataset(waveforms)
         self.log('Parsing complete, {} waveforms in total'.format(
-            len(self.waveforms)))
-        dataset = Dataset(self.waveforms)
+            len(dataset)))
         return dataset
 
     def parse(self):
@@ -311,17 +329,17 @@ class DataLoader:
 
 
 class StandardCSVLoader(DataLoader):
-    
+
     """
     A loader parsing "standard csv file".
 
     The format of the table file is like::
-        
+
         compound,concentration,well,plate,time,signal
         CP1,0.1,A1,P1,0,1000
         CP1,0.1,A1,P1,0.33,1001
         CP2,0.1,A2,P1,0,1000
-    
+
     """
 
     def __init__(self, filepath: str = None, data: pd.DataFrame = None, log=None):
@@ -334,11 +352,12 @@ class StandardCSVLoader(DataLoader):
                 raise ValueError('File path and data cannot both be None')
             self.data = data
 
-    def parse(self):
+    def parse(self) -> List:
         if self.filepath is None:
             df = self.data
         else:
             df = pd.read_csv(self.filepath)
+        input_items = []
         required_columns = ['plate', 'compound',
                             'concentration', 'well', 'time', 'signal']
         attribute_columns = ['plate', 'compound', 'state',
@@ -355,8 +374,8 @@ class StandardCSVLoader(DataLoader):
             input_item = {x: item[x] for x in attribute_columns if x in item}
             signal = {'x': gdf['time'].values, 'y': gdf['signal'].values}
             input_item['signal'] = signal
-            waveform = WaveformFull(input_item)
-            self.waveforms.append(waveform)
+            input_items.append(input_item)
+        return input_items
 
 
 class SeqLoader(DataLoader):
@@ -378,7 +397,7 @@ class SeqLoader(DataLoader):
         df = pd.read_csv(self.filepath, sep='\t')
         time = df.iloc[:, 4].values
         state = self.state
-        waveforms = []
+        input_items = []
         for well in get_wells():
             input_item = {
                 'plate': self.plate,
@@ -394,9 +413,8 @@ class SeqLoader(DataLoader):
                 cut = cut_opts[state]
                 input_item['signal'] = {
                     'x': time[:cut], 'y': df[well].values[:cut]}
-            waveform = WaveformFull(input_item)
-            waveforms.append(waveform)
-        self.waveforms = waveforms
+            input_items.append(input_item)
+        return input_items
 
     def transfer_with_meta(self, df: pd.DataFrame, columns=None) -> Dataset:
         assert len(df) == len(df.well.unique())

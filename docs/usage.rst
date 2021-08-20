@@ -424,7 +424,7 @@ The following is an example of how to derive IC50 of peak frequency for Aspirin.
     # You may also need to check whether there is no curve
     cc = np.arange(curves[0].c_min, curves[0].c_max, 0.01)
     for curve in curves:
-        label = '{}-{:.2f}'.format(type(curve).__name__, curve.EC50)
+        label = '{}-{:.2f}'.format(type(curve).__name__, curve.EC50())
         fnc = np.vectorize(curve.predict)
         ax.plot(cc, fnc(cc), label=label)
     ax.plot(curve.concentrations, curve.responses, 'o', label='Response')
