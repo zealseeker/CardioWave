@@ -693,6 +693,123 @@ class Waveform:
             new_signals, index=self.series.index, name=self.series.name)
         self.__init__(series)
 
+    def blood_pressure_profile(self) -> pd.DataFrame:
+        """Get profile of blood pressure
+
+        The function returns a data frame with rows of cycles of blood pressure
+        change and columns of systolic, diastolic, pulse pressure and RR
+        distance.
+        """
+        data = {'group_id': [], 'SP': [], 'DP': [], 'PP': [], 'RR': [], 'time': []}
+        for group_id, gdf in self.group:
+            data['group_id'].append(group_id)
+            s = gdf[self.name]
+            pos = s.idxmin()
+            dp = s[pos]
+            sp = s.iloc[0]
+            peak_time = gdf.iloc[0].time
+            next_peak_time = self.df.iloc[gdf.index[-1] + 1]['time']
+            data['DP'].append(dp)
+            data['SP'].append(sp)
+            data['PP'].append(sp-dp)
+            data['RR'].append(next_peak_time - peak_time)
+            data['time'].append(peak_time)
+        return pd.DataFrame(data)
+
+
+class BloodPressure:
+    """Class for blood pressure data analysis
+    
+    Args:
+        data: A pandas series with time as index and blood pressure as value.
+        batch_window: Size of a batch to analyze (unit ms).
+        window_size: Size of the window to derive parameters.
+        sample_interval: The interval of sample. If `None`, it will be inferred
+            by the first two data points.
+        point_interval: The inverval of points to get parameters.
+    
+    Attributes:
+        max_time: The maximum time in the data.
+    """
+
+    def __init__(self, 
+                 data: pd.Series,
+                 batch_window: int = 1800000,
+                 window_size: int = 10000,
+                 sample_interval: int = 2,
+                 point_interval: int = 1000) -> None:
+        data.name = 'bp'
+        data.index.name = 'time'
+        self.series = data
+        self.batch_window = batch_window
+        self.window_size = window_size
+        self.sample_interval = sample_interval
+        self.point_interval = point_interval
+        self.max_time = self.series.index.max()
+
+    def get_batch_series(self) -> pd.Series:
+        i = 0
+        while True:
+            start = self.batch_window * i
+            end = (i+1) * self.batch_window + self.window_size
+            i += 1
+            if end > self.max_time:
+                break
+            yield self.series.loc[start: end, 'bp']
+
+    def get_start_times(self, batch_series: pd.Series = None) -> pd.Index:
+        if batch_series is None:
+            batch_series = self.series
+        times = batch_series.index
+        return times[::self.point_interval//self.sample_interval]
+    
+    def get_windows_generator(self, batch_series: pd.Series) -> tuple:
+        start_times = self.get_start_times(batch_series)
+        wave = Waveform(batch_series)
+        wave.get_peaks()
+        self.wave = wave
+        self.window_total = len(start_times)
+        df = wave.blood_pressure_profile()
+        abnormal_ids = df[df['DP']<=0].index
+        remove_ids = set(abnormal_ids) | set(abnormal_ids + 1)
+        df = df.drop(remove_ids) # Remove 0 data
+        df = df[df['SP']<200]
+        def generater():
+            for start_time in start_times:
+                end_time = start_time + self.window_size
+                tdf = df[(df['time']>start_time)&(df['time']< end_time)]
+                yield tdf
+        return len(start_times), generater
+
+    def calc_hrv(self, window: pd.DataFrame):
+        """Calculate heart rate variability
+        
+        SD1 is the perpendicular distances of the points
+        :math:`(RR_{n}, RR_{n+1})` to the line :math:`y=x`.
+        SD2 is the points to the line :math:`y=-x + 2R_{m}`, where :math:`R_{m}`
+        is the mean of RR intervals.
+
+        See *Computing in Cardiology* 2014; 41:437-440.
+
+        Args:
+            window: A data frame of blood pressure window
+
+        Returns:
+            tuple: A tuple with :math:`R_{m}`, SD1, SD2, and SD1/SD2
+        """
+        rr_n = window.RR.values[:-1]
+        rr_n1 = window.RR.values[1:]
+        rm = window.RR.mean()
+        p1 = np.array([0, 0])
+        p2 = np.array([1, 1])
+        p3 = np.array([0, 2 * rm])
+        p4 = np.array([2 * rm, 0])
+        p = np.dstack((rr_n, rr_n1))
+        sd1 = (np.abs(np.cross(p2-p1, p1-p)) / np.linalg.norm(p2-p1)).std()
+        sd2 = (np.abs(np.cross(p4-p3, p3-p)) / np.linalg.norm(p4-p3)).std()
+        sd1_sd2 = sd1 / sd2
+        return rm, sd1, sd2, sd1_sd2
+
 
 def wave_transform(signals: np.ndarray, sample_rate=100, method='fft'):
     """
