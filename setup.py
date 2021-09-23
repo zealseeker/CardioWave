@@ -25,7 +25,8 @@ setuptools.setup(
     install_requires=[
         'statsmodels',
         'tqdm',
-        'joblib'
+        'joblib',
+        'scikit-learn'
     ],
     zip_safe=False,
 )

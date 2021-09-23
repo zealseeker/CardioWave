@@ -11,10 +11,12 @@ import logging
 import os
 from multiprocessing import Pool
 from collections.abc import Callable
-from tqdm import tqdm
+from tqdm.auto import tqdm
+import pandas as pd
 from joblib import Parallel, delayed
+from cdwave import fnc
 from cdwave.data import WaveformFull, Dataset
-from cdwave.fnc import Waveform
+from cdwave.fnc import Waveform, BloodPressure
 
 logger = logging.getLogger(__name__)
 
@@ -144,3 +146,46 @@ def calc_parameter_with_threshold(waveform: WaveformFull, threshold, method='pro
         logging.error('Cannot get parameters of %s', waveform)
         raise e
     return r
+
+
+def derive_bp_parameters(bp: BloodPressure, start = 0, end = None, processes=4):
+    if end is None:
+        end = bp.max_time
+    series = bp.series.loc[start: end]
+    batch_generator = bp.get_batch_series(series)
+    # Calculate total batches
+    total = (bp.max_time - bp.window_size) // bp.batch_window
+    sub_dfs = Parallel(processes)(
+        delayed(derive_batch_bp_parameters)(batch_bp) for batch_bp in tqdm(batch_generator, total=total))
+    df = pd.concat(sub_dfs)
+    df['time(h)'] = df['start_time'] / 1000 / 3600
+    df['time(m)'] = df['start_time'] / 1000 / 60
+    return df
+
+
+def derive_batch_bp_parameters(batch_bp: BloodPressure):
+    batch_bp.run_filter()
+    total, generator = batch_bp.get_windows_generator()
+    rows = []
+    for start_time, window in zip(batch_bp.get_start_times(), generator()):
+        window = window[window['time_diff']>=50].set_index('group_id')
+        if len(window) == 0:
+            continue
+        hrv = batch_bp.calc_hrv(window)
+        tao = int(hrv[0] // 6 * 2)
+        angle = batch_bp.calc_angle(start_time, tao)
+        row = {
+            'PP_min': window['PP'].min(),
+            'PP_max': window['PP'].max(),
+            'PP_mean': window['PP'].mean(),
+            'PP_25': window['PP'].quantile(.25),
+            'PP_75': window['PP'].quantile(.75),
+            'RR_mean': hrv[0],
+            'SD1': hrv[1],
+            'SD2': hrv[2],
+            'SDratio': hrv[3],
+            'start_time': window.time.values[0],
+            'angle': angle
+        }
+        rows.append(row)
+    return pd.DataFrame(rows)

@@ -1,6 +1,7 @@
 import unittest
 import warnings
 import numpy as np
+import pandas as pd
 from cdwave import fnc
 from tests import Dataset
 
@@ -89,3 +90,32 @@ class TestFnc(unittest.TestCase):
         wave.analyse()
         r = wave.calc_fft_freq_ratio()
         self.assertAlmostEqual(r, 1.1, 1)
+
+
+class TestBloodPressure(unittest.TestCase):
+    times = np.arange(0, 100000, 2)
+    signal = np.sin(times/10)*100 + np.random.random(len(times))*10
+    data = pd.Series(signal, index=times)
+
+    def test_batch_bp(self):
+        bp = fnc.BloodPressure(self.data, 10000, 1000)
+        bp.run_filter()
+        batches = list(bp.get_batch_series())
+        self.assertEqual(len(batches), 10)
+    
+    def test_hrv(self):
+        bp = fnc.BloodPressure(self.data, 1000, 100)
+        batch_bp = next(bp.get_batch_series())
+        n, generator = batch_bp.get_windows_generator()
+        for window in generator():
+            res = batch_bp.calc_hrv(window)
+            for each in res:
+                self.assertNotEqual(each, 0)
+            break
+    
+    def test_angle(self):
+        bp = fnc.BloodPressure(self.data, 1000, 100)
+        batch_bp = next(bp.get_batch_series())
+        start_time = batch_bp.get_start_times()[0]
+        angle = batch_bp.calc_angle(start_time, 10)
+        self.assertLess(angle, 90)

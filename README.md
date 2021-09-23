@@ -74,6 +74,7 @@ scipy>=1.2
 tqdm>=4.32
 pandas>=0.24
 statsmodels>=0.10.2
+scikit-learn>=0.21
 ```
 For GUI support and parameter analysis
 ```
@@ -85,7 +86,6 @@ All the packages required are included in the lastest Anaconda envrionment.
 ## Make documents
 
 0.  Matplotlib is required to render pictures
-
 1.  Generate source code of documents
 ```
 sphinx-apidoc -o docs/source -f cdwave

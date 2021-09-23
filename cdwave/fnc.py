@@ -10,6 +10,8 @@
 import logging
 import pandas as pd
 import numpy as np
+from typing import Iterator, Tuple, Generator
+from scipy import ndimage
 from scipy.stats import kstest
 from scipy.signal import find_peaks
 from scipy.signal import peak_widths
@@ -19,7 +21,9 @@ from scipy.signal import filtfilt
 from scipy.signal import hilbert
 from scipy.signal import savgol_filter
 from scipy.signal import welch
+from scipy.optimize import minimize_scalar
 import statsmodels.nonparametric.api as smnp
+from sklearn.neighbors import KernelDensity
 logger = logging.getLogger(__name__)
 
 
@@ -700,7 +704,8 @@ class Waveform:
         change and columns of systolic, diastolic, pulse pressure and RR
         distance.
         """
-        data = {'group_id': [], 'SP': [], 'DP': [], 'PP': [], 'RR': [], 'time': []}
+        data = {'group_id': [], 'SP': [], 'DP': [],
+                'PP': [], 'RR': [], 'time': []}
         for group_id, gdf in self.group:
             data['group_id'].append(group_id)
             s = gdf[self.name]
@@ -719,7 +724,7 @@ class Waveform:
 
 class BloodPressure:
     """Class for blood pressure data analysis
-    
+
     Args:
         data: A pandas series with time as index and blood pressure as value.
         batch_window: Size of a batch to analyze (unit ms).
@@ -727,12 +732,12 @@ class BloodPressure:
         sample_interval: The interval of sample. If `None`, it will be inferred
             by the first two data points.
         point_interval: The inverval of points to get parameters.
-    
+
     Attributes:
         max_time: The maximum time in the data.
     """
 
-    def __init__(self, 
+    def __init__(self,
                  data: pd.Series,
                  batch_window: int = 1800000,
                  window_size: int = 10000,
@@ -745,45 +750,60 @@ class BloodPressure:
         self.window_size = window_size
         self.sample_interval = sample_interval
         self.point_interval = point_interval
+        self.min_time = self.series.index[0]
         self.max_time = self.series.index.max()
 
-    def get_batch_series(self) -> pd.Series:
+    def get_batch_series(self, series: pd.Series = None) -> Iterator['BloodPressure']:
+        if series is None:
+            series = self.series
         i = 0
         while True:
             start = self.batch_window * i
             end = (i+1) * self.batch_window + self.window_size
             i += 1
-            if end > self.max_time:
+            batch_series = self.series.loc[start: end]
+            bp = BloodPressure(batch_series, batch_window=self.batch_window,
+                               window_size=self.window_size, sample_interval=self.sample_interval,
+                               point_interval=self.point_interval)
+            yield bp
+            if end >= self.max_time:
                 break
-            yield self.series.loc[start: end, 'bp']
 
     def get_start_times(self, batch_series: pd.Series = None) -> pd.Index:
         if batch_series is None:
             batch_series = self.series
         times = batch_series.index
-        return times[::self.point_interval//self.sample_interval]
-    
-    def get_windows_generator(self, batch_series: pd.Series) -> tuple:
+        return times[:self.batch_window//self.sample_interval:self.point_interval//self.sample_interval]
+
+    def get_windows_generator(self) -> Tuple[int, Generator[pd.DataFrame, None, None]]:
+        """Return a generator of window data frame
+
+        The data frame has the following columns:
+        SP, DP, PP, RR, time, time_diff
+        """
+        batch_series = self.series
         start_times = self.get_start_times(batch_series)
         wave = Waveform(batch_series)
         wave.get_peaks()
         self.wave = wave
-        self.window_total = len(start_times)
         df = wave.blood_pressure_profile()
-        abnormal_ids = df[df['DP']<=0].index
-        remove_ids = set(abnormal_ids) | set(abnormal_ids + 1)
-        df = df.drop(remove_ids) # Remove 0 data
-        df = df[df['SP']<200]
-        def generater():
+        df['time_diff'] = df.time.diff().iloc[1:].shift(-1)
+        abnormal_ids = df[df['DP'] <= 0].index
+        remove_ids = (set(abnormal_ids) | set(
+            abnormal_ids + 1)) & set(df.index)
+        df = df.drop(remove_ids)  # Remove 0 data
+        df = df[df['SP'] < 200]
+
+        def generator():
             for start_time in start_times:
                 end_time = start_time + self.window_size
-                tdf = df[(df['time']>start_time)&(df['time']< end_time)]
+                tdf = df[(df['time'] >= start_time) & (df['time'] < end_time)]
                 yield tdf
-        return len(start_times), generater
+        return len(start_times), generator
 
     def calc_hrv(self, window: pd.DataFrame):
         """Calculate heart rate variability
-        
+
         SD1 is the perpendicular distances of the points
         :math:`(RR_{n}, RR_{n+1})` to the line :math:`y=x`.
         SD2 is the points to the line :math:`y=-x + 2R_{m}`, where :math:`R_{m}`
@@ -809,6 +829,42 @@ class BloodPressure:
         sd2 = (np.abs(np.cross(p4-p3, p3-p)) / np.linalg.norm(p4-p3)).std()
         sd1_sd2 = sd1 / sd2
         return rm, sd1, sd2, sd1_sd2
+
+    def run_filter(self):
+        self.series = pd.Series(signal_filter(
+            self.series), index=self.series.index, name=self.series.name)
+
+    def calc_attractor(self, df, tao):
+        start_time = df.index[0]
+        tao = tao // 2 * 2
+        n = df.index.max()
+        df['y'] = [0] * int(tao//2) + df['bp'].loc[:n-tao].tolist()
+        df['z'] = [0] * tao + df['bp'].loc[:n-2*tao].tolist()
+        df['x'] = df['bp']
+        df['u'] = (df['x']+df['y']+df['z'])/3
+        df['v'] = (df['x']+df['y']-2*df['z'])/np.sqrt(6)
+        df['w'] = (df['x']-df['y'])/np.sqrt(2)
+        tdf = df.loc[start_time+2*tao:]
+        tdf = tdf[(tdf['x'] > 0) & (tdf['y'] > 0) & (tdf['z'] > 0)]
+        X, Y = np.mgrid[-60:60:200j, -60:60:200j]
+        positions = np.vstack([X.ravel(), Y.ravel()]).T
+        kernel = KernelDensity(kernel='gaussian')
+        kernel.fit(tdf[['v', 'w']])
+        Z = kernel.score_samples(positions)
+        Z = Z.reshape(X.shape)
+        Z = np.rot90(np.exp(Z))
+        return Z
+
+    def calc_angle(self, start_time, tao):
+        def to_be_maximized(x):
+            RZ = ndimage.rotate(Z, x, reshape=False)
+            return -RZ[100:, :].sum(axis=1).max()
+        df = pd.DataFrame(
+            self.series.loc[start_time:start_time + self.window_size].copy())
+        Z = self.calc_attractor(df, tao)
+        res = minimize_scalar(
+            to_be_maximized, bounds=(0, 30), method='bounded')
+        return res.x
 
 
 def wave_transform(signals: np.ndarray, sample_rate=100, method='fft'):
