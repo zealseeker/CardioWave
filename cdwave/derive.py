@@ -166,13 +166,16 @@ def derive_bp_parameters(bp: BloodPressure, start = 0, end = None, processes=4):
 def derive_batch_bp_parameters(batch_bp: BloodPressure):
     batch_bp.run_filter()
     total, generator = batch_bp.get_windows_generator()
+    if total == 0:
+        return pd.DataFrame()
     rows = []
     for start_time, window in zip(batch_bp.get_start_times(), generator()):
         window = window[window['time_diff']>=50].set_index('group_id')
         if len(window) == 0:
             continue
         hrv = batch_bp.calc_hrv(window)
-        tao = int(hrv[0] // 6 * 2)
+        tao = int(hrv[0] // 3)
+        tao = tao // batch_bp.sample_interval * batch_bp.sample_interval
         angle = batch_bp.calc_angle(start_time, tao)
         row = {
             'PP_min': window['PP'].min(),

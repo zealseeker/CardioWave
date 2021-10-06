@@ -707,8 +707,10 @@ class Waveform:
         data = {'group_id': [], 'SP': [], 'DP': [],
                 'PP': [], 'RR': [], 'time': []}
         for group_id, gdf in self.group:
-            data['group_id'].append(group_id)
             s = gdf[self.name]
+            if len(s[s==0]) > 0:
+                continue
+            data['group_id'].append(group_id)
             pos = s.idxmin()
             dp = s[pos]
             sp = s.iloc[0]
@@ -782,9 +784,13 @@ class BloodPressure:
         SP, DP, PP, RR, time, time_diff
         """
         batch_series = self.series
+        batch_series[(batch_series>200)|(batch_series<=0)] = 0
         start_times = self.get_start_times(batch_series)
         wave = Waveform(batch_series)
-        wave.get_peaks()
+        success = wave.get_peaks()
+        if not success:
+            logger.warning("Do not find any peak in the BP data. Please check.")
+            return 0, None
         self.wave = wave
         df = wave.blood_pressure_profile()
         df['time_diff'] = df.time.diff().iloc[1:].shift(-1)
@@ -834,12 +840,20 @@ class BloodPressure:
         self.series = pd.Series(signal_filter(
             self.series), index=self.series.index, name=self.series.name)
 
-    def calc_attractor(self, df, tao):
+    def calc_attractor(self, df, tao: int):
         start_time = df.index[0]
-        tao = tao // 2 * 2
-        n = df.index.max()
-        df['y'] = [0] * int(tao//2) + df['bp'].loc[:n-tao].tolist()
-        df['z'] = [0] * tao + df['bp'].loc[:n-2*tao].tolist()
+        _tao_sample = int(tao // self.sample_interval)
+        if _tao_sample * self.sample_interval != tao:
+            logger.warning('The tao %d cannot be exact divided by sample inteval', tao)
+            tao = _tao_sample * self.sample_interval
+        if tao > 300: # TODO It should not be hard coded
+            return None # Abrnormal tao
+        n = len(df)
+        if 2 * _tao_sample + len(df['bp'].iloc[:n-2*_tao_sample]) != n:
+            logger.error('Invalid number of tao')
+            logger.error('n={}, _tao_sample={}, n-2*tao_sample={}'.format(n, _tao_sample, len(df['bp'].iloc[:n-2*_tao_sample])))
+        df['y'] = [0] * _tao_sample + df['bp'].iloc[:n-_tao_sample].tolist()
+        df['z'] = [0] * (2 * _tao_sample) + df['bp'].iloc[:n-2*_tao_sample].tolist()
         df['x'] = df['bp']
         df['u'] = (df['x']+df['y']+df['z'])/3
         df['v'] = (df['x']+df['y']-2*df['z'])/np.sqrt(6)
@@ -862,6 +876,7 @@ class BloodPressure:
         df = pd.DataFrame(
             self.series.loc[start_time:start_time + self.window_size].copy())
         Z = self.calc_attractor(df, tao)
+        if Z is None: return -1
         res = minimize_scalar(
             to_be_maximized, bounds=(0, 30), method='bounded')
         return res.x
