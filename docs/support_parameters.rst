@@ -23,6 +23,7 @@
 *	Average Decay Time (`down_length`): Average duration of decreasing waveform, from peak point to the first point lower than valley value plus variance (10% of max)
 *	Peak To End (`full_down`): Average of duration between peak and next starting point
 *	Number of Peaks (`n_peak`): Number of peaks
+*	Number of All Peaks (`n_all_peaks`): Number of peaks counting multi-peaks
 *	Peak Frequency (`freq`): Number of period for the 100 seconds, 100/Peak Space
 *	Maximum Amplitude (`maximum`): The highest amplitude
 *	Maximum Intensity (`max_intensity`): The highest signal in the waveform
