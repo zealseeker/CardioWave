@@ -828,6 +828,7 @@ class BloodPressure:
         rr_n = window.RR.values[:-1]
         rr_n1 = window.RR.values[1:]
         rm = window.RR.mean()
+        rmed = window.RR.median()
         p1 = np.array([0, 0])
         p2 = np.array([1, 1])
         p3 = np.array([0, 2 * rm])
@@ -836,7 +837,13 @@ class BloodPressure:
         sd1 = (np.abs(np.cross(p2-p1, p1-p)) / np.linalg.norm(p2-p1)).std()
         sd2 = (np.abs(np.cross(p4-p3, p3-p)) / np.linalg.norm(p4-p3)).std()
         sd1_sd2 = sd1 / sd2
-        return rm, sd1, sd2, sd1_sd2
+        return {
+            'RR_mean': rm,
+            'RR_med': rmed,
+            'SD1': sd1,
+            'SD2': sd2,
+            'SDratio': sd1_sd2
+        }
 
     def run_filter(self):
         self.series = pd.Series(signal_filter(
