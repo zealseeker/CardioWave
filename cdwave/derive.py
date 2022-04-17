@@ -174,7 +174,7 @@ def derive_batch_bp_parameters(batch_bp: BloodPressure):
         if len(window) == 0:
             continue
         hrv = batch_bp.calc_hrv(window)
-        tao = int(hrv[0] // 3)
+        tao = int(hrv['RR_mean'] // 3)
         tao = tao // batch_bp.sample_interval * batch_bp.sample_interval
         angle = batch_bp.calc_angle(start_time, tao)
         row = {
@@ -183,12 +183,9 @@ def derive_batch_bp_parameters(batch_bp: BloodPressure):
             'PP_mean': window['PP'].mean(),
             'PP_25': window['PP'].quantile(.25),
             'PP_75': window['PP'].quantile(.75),
-            'RR_mean': hrv[0],
-            'SD1': hrv[1],
-            'SD2': hrv[2],
-            'SDratio': hrv[3],
             'start_time': window.time.values[0],
             'angle': angle
         }
+        row.update(hrv)
         rows.append(row)
     return pd.DataFrame(rows)

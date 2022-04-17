@@ -493,6 +493,7 @@ class Waveform:
         df = self.df
         is_double_peak = (df['peak'] > 1).any()
         max_combo_peaks = df['peak'].max()
+        n_all_peaks = len(df[df['peak']>0])
         if self.num_peak < 4:
             ks_p = 1
         elif self.num_peak < 6:
@@ -503,7 +504,8 @@ class Waveform:
                       'uniform': ks_p > 0.99, 'noise': self._noise_test(),
                       'n_peak': self.num_peak, 'max_combo_peaks': max_combo_peaks,
                       'fail_analysis': self.fail_analysis,
-                      'fft_ratio': self.calc_fft_freq_ratio()
+                      'fft_ratio': self.calc_fft_freq_ratio(),
+                      'n_all_peaks': n_all_peaks
                       }
         parameters.update(self.calc_frequency_parameters())
         parameters.update(self.calc_status_parameter())

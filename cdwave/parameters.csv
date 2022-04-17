@@ -24,6 +24,7 @@ up_length,Average Rise Time,Value,Average rise time
 down_length,Average Decay Time,Value,"Average duration of decreasing waveform, from peak point to the first point lower than valley value plus variance (10% of max)"
 full_down,Peak To End,Value,Average of duration between peak and next starting point
 n_peak,Number of Peaks,Value,Number of peaks
+n_all_peaks,Number of All Peaks,Number of peaks counting multi-peaks
 freq,Peak Frequency,Value,"Number of period for the 100 seconds, 100/Peak Space"
 maximum,Maximum Amplitude,Value,The highest amplitude
 max_intensity,Maximum Intensity,Value,The highest signal in the waveform

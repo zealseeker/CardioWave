@@ -19,7 +19,7 @@ import cdwave
 # -- Project information -----------------------------------------------------
 
 project = 'CardioWave'
-copyright = '2020, Hongbin Yang'
+copyright = '2020-2022, University of Cambridge'
 author = 'Hongbin Yang'
 
 # The full version, including alpha/beta/rc tags
